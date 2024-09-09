@@ -16,9 +16,9 @@ class Visitor(Base):
     updated_at = Column(DateTime, nullable=True)
 
     face = relationship("Faces", back_populates="visitor")
-    transaction = relationship("Transaction",back_populates="transactions")
-    attandance = relationship("Attendance",back_populates="attendances")
-    client = relationship("Client", back_populates="client")
+    transaction = relationship("Transaction",back_populates="visitor")
+    attendance = relationship("Attendance",back_populates="visitor")
+    client = relationship("Client", back_populates="visitor")
 
 
 

@@ -16,5 +16,5 @@ class Attendance(Base):
     created_at = Column(DateTime, server_default=func.timezone(DEFAULT_TZ, func.now()))
     updated_at = Column(DateTime, nullable=True)
 
-    client = relationship("Client", back_populates="client")
-    visitor = relationship("Visitor", back_populates="visitor")
+    client = relationship("Client", back_populates="attendance")
+    visitor = relationship("Visitor", back_populates="attendance")

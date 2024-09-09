@@ -15,5 +15,5 @@ class Client(Base):
 
     face = relationship("Faces", back_populates="client")
     transaction = relationship("Transaction",back_populates="client")
-    attandance = relationship("Attendance",back_populates="client")
+    attendance = relationship("Attendance",back_populates="client")
     visitor = relationship("Visitor",back_populates="client")
