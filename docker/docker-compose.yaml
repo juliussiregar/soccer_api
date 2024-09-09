@@ -22,9 +22,9 @@ services:
     image: postgres:13-alpine
     environment:
       TZ: Asia/Jakarta
-      POSTGRES_USER: VisitorApp
+      POSTGRES_USER: visitorapp
       POSTGRES_PASSWORD: visitorapp1
-      POSTGRES_DB: VisitorApp1
+      POSTGRES_DB: visitorapp
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
@@ -32,10 +32,10 @@ services:
   pgbouncer:
     image: edoburu/pgbouncer
     environment:
-      DB_USER: VisitorApp
+      DB_USER: visitorapp
       DB_PASSWORD: visitorapp1
       DB_HOST: postgres
-      DB_NAME: VisitorApp1
+      DB_NAME: visitorapp
     depends_on:
       - postgres
     restart: unless-stopped
@@ -43,7 +43,7 @@ services:
       - :5432
 
   app:
-    image: visitorappsimage
+    image: visitorappimage
     depends_on:
       - postgres
       - pgbouncer
@@ -57,7 +57,7 @@ services:
     restart: unless-stopped
 
   migration:
-    image: visitorappsimage
+    image: visitorappimage
     depends_on:
       - postgres
       - pgbouncer
