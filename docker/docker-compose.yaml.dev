@@ -1,0 +1,56 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:13-alpine
+    environment:
+      TZ: Asia/Jakarta
+      POSTGRES_USER: solidPace1
+      POSTGRES_PASSWORD: solidPace1!1!
+      POSTGRES_DB: solidPace1
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  pgbouncer:
+    image: edoburu/pgbouncer
+    environment:
+      DB_USER: solidPace1
+      DB_PASSWORD: solidPace1!1!
+      DB_HOST: postgres
+      DB_NAME: solidPace1
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    ports:
+      - 5432:5432
+
+  app:
+    image: solidpaceimage
+    depends_on:
+      - postgres
+      - pgbouncer
+    environment:
+      TZ: Asia/Jakarta
+    volumes:
+      - ./../.env.dev:/app/.env.dev
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]
+    ports:
+      - 8080:80
+    restart: unless-stopped
+
+  migration:
+    image: solidpaceimage
+    depends_on:
+      - postgres
+      - pgbouncer
+    volumes:
+      - ./../.env.dev:/app/.env.dev
+    environment:
+      TZ: Asia/Jakarta
+    command: ["alembic", "upgrade", "head"]
+    restart: on-failure
+
+volumes:
+  postgres_data:
+    driver: local

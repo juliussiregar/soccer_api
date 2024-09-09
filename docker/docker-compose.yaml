@@ -1,0 +1,73 @@
+version: "3.8"
+
+services:
+  # nginx:
+  #   image: linuxserver/swag
+  #   cap_add:
+  #     - NET_ADMIN
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx:/config/nginx
+  #     - ./../uploads:/uploads
+  #   environment:
+  #     PUID: 1003
+  #     PGID: 1003
+  #     TZ: Asia/Jakarta
+  #     URL: api-solid.aluesagd.com
+  #     VALIDATION: http
+
+  postgres:
+    image: postgres:13-alpine
+    environment:
+      TZ: Asia/Jakarta
+      POSTGRES_USER: VisitorApp
+      POSTGRES_PASSWORD: visitorapp1
+      POSTGRES_DB: VisitorApp1
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  pgbouncer:
+    image: edoburu/pgbouncer
+    environment:
+      DB_USER: VisitorApp
+      DB_PASSWORD: visitorapp1
+      DB_HOST: postgres
+      DB_NAME: VisitorApp1
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    ports:
+      - :5432
+
+  app:
+    image: visitorappsimage
+    depends_on:
+      - postgres
+      - pgbouncer
+    environment:
+      TZ: Asia/Jakarta
+    volumes:
+      - ./../.env:/app/.env
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]
+    ports:
+      - 8080:80
+    restart: unless-stopped
+
+  migration:
+    image: visitorappsimage
+    depends_on:
+      - postgres
+      - pgbouncer
+    volumes:
+      - ./../.env:/app/.env
+    environment:
+      TZ: Asia/Jakarta
+    command: ["alembic", "upgrade", "head"]
+    restart: on-failure
+
+volumes:
+  postgres_data:
+    driver: local
