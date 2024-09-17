@@ -19,7 +19,8 @@ attendance_service = AttendanceService()
 
 
 @router.post('/attendance/check-in')
-def attendance_check_in( client_name:Optional[str]=None,file: UploadFile = File(...)):
+def attendance_check_in( auth_user: Annotated[AuthUser, Depends(jwt_middleware)],client_name:Optional[str]=None,file: UploadFile = File(...)):
+    auth_service.has_role(auth_user.id,ROLE_ADMIN)
     attendances,visitors= attendance_service.create(client_name,file)
 
     return {
@@ -41,7 +42,8 @@ def attendance_check_in( client_name:Optional[str]=None,file: UploadFile = File(
     } 
 
 @router.put('/attendance/check-out')
-def attendance_check_out( client_name:Optional[str]=None,file: UploadFile = File(...)):
+def attendance_check_out(auth_user: Annotated[AuthUser, Depends(jwt_middleware)],client_name:Optional[str]=None,file: UploadFile = File(...)):
+    auth_service.has_role(auth_user.id,ROLE_ADMIN)
     attendances, visitors = attendance_service.update(client_name,file)
 
     return {
