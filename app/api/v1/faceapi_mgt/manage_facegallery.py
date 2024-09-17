@@ -4,12 +4,12 @@ from app.core.constants.auth import ROLE_ADMIN
 from app.schemas.faceapi_mgt import CreateFaceGallery
 from app.clients.face_api import FaceApiClient
 from app.services.auth import AuthService
-# from app.services.face_api import FaceApiService
+from app.services.client import ClientService
 from app.middleware.jwt import jwt_middleware, AuthUser
 
-client = FaceApiClient()
+clients = FaceApiClient()
 router = APIRouter()
-# service = FaceApiService()
+client_service = ClientService()
 auth_service = AuthService()
 
 
@@ -21,8 +21,8 @@ def create_facegallery(auth_user: Annotated[AuthUser, Depends(jwt_middleware)],r
     auth_service.has_role(auth_user.id, ROLE_ADMIN)
     try:
         # Menggunakan klien API untuk mengirim data
-        result = client.create_facegallery(request_body)
-        # result = service.insert_facegallery(request_body)
+        # result = clients.create_facegallery(request_body)
+        result = client_service.insert_facegallery(request_body)
         return result
     except HTTPException as e:
         raise HTTPException(status_code=e.status_code, detail=e.detail)
@@ -32,7 +32,7 @@ def get_facegalleries(auth_user: Annotated[AuthUser, Depends(jwt_middleware)]):
     auth_service.has_role(auth_user.id, ROLE_ADMIN)
     try:
         # Menggunakan klien API untuk mengirim data
-        result = client.get_facegallery()
+        result = clients.get_facegallery()
         # result = service.insert_facegallery(request_body)
         return result
     except HTTPException as e:

@@ -9,8 +9,9 @@ from app.core.constants.app import DEFAULT_TZ
 class Transaction(Base):
     __tablename__ = "transactions"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    client_id = Column(UUID(as_uuid=True),ForeignKey("visitors.id"), nullable=False)
-    visitor_id = Column(UUID(as_uuid=True), ForeignKey("clients.id"), nullable=False)
+    client_id = Column(UUID(as_uuid=True), ForeignKey("clients.id"), nullable=False)
+    visitor_id = Column(UUID(as_uuid=True), ForeignKey("visitors.id"), nullable=False)
+    url = Column(String,nullable=True)
     created_at = Column(DateTime, server_default=func.timezone(DEFAULT_TZ, func.now()))
     updated_at = Column(DateTime, nullable=True)
 
