@@ -62,5 +62,17 @@ class AttendanceRepository :
             )
 
         return ci_status
+    
+    def existing_attendance_id(self,visitor_id:uuid)->Attendance:
+        with get_session() as db:
+            ci_status = (
+                db.query(Attendance)
+                .filter(Attendance.visitor_id == visitor_id,
+                        Attendance.Check_out == None
+            )
+            .first()
+            )
+
+        return ci_status
 
     

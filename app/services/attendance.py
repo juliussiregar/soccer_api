@@ -1,5 +1,5 @@
 from typing import List, Tuple
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from app.services.visitor import VisitorService
 from app.schemas.visitor import CreateNewVisitor,Face,GetVisitor,IdentifyVisitorFace
 from app.schemas.faceapi_mgt import CreateEnrollFace,IdentifyFace
@@ -29,11 +29,18 @@ class AttendanceService:
     def create(self,client_name:str,file:str)->Tuple[Visitor,List[Attendance]]:
         identify_visitor,trx = self.visitor_service.identify_face_visitor(client_name,file)
         today_start = self.get_start_of_day(datetime.utcnow())
-        existing_attendance = self.attendance_repo.existing_attendance(identify_visitor.id,today_start)
-        
-        if existing_attendance:
+        existing_attendance_today = self.attendance_repo.existing_attendance(identify_visitor.id,today_start)
+        existing_by_id = self.attendance_repo.existing_attendance_id(identify_visitor.id)
+        if existing_by_id:
+            if existing_attendance_today:
             # Jika sudah check-in tapi belum check-out, berikan error
-            raise UnprocessableException(f"Visitor {identify_visitor.username} has already checked in and has not checked out yet.")
+                raise UnprocessableException(f"Visitor {identify_visitor.username} has already checked in and has not checked out yet.")
+            attendance_check_out = UpdateCheckOut(
+                visitor_id=identify_visitor.id,
+                client_id=identify_visitor.client_id,
+                check_out=self.get_start_of_day(datetime.utcnow() - timedelta(days=1)) + timedelta(hours=23, minutes=59)
+            )
+            self.attendance_repo.update_attendance_checkout(attendance_check_out)
 
         try:
             attendance_check_in = CreateCheckIn(
