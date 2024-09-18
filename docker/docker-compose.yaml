@@ -15,7 +15,7 @@ services:
       PUID: 1003
       PGID: 1003
       TZ: Asia/Jakarta
-      URL: visitorms.aluesagd.com
+      URL: api-visitorms.aluesagd.com
       VALIDATION: http
 
   postgres:
