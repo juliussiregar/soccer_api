@@ -32,7 +32,12 @@ class VisitorService:
     def create_visitor(self,payload:CreateNewVisitor, file:str) -> Tuple[Client,Visitor, Faces,Transaction]:
         is_username_exist = self.visitor_repo.is_username_used(payload.username)
         is_nik_exist = self.visitor_repo.is_nik_used(payload.nik)
+        get_client = self.client_repo.get_client()
+        payload.client_name = get_client.client_name
 
+        if get_client is None:
+            raise UnprocessableException("Client not found")
+        
         if is_username_exist and is_nik_exist:
             raise UnprocessableException("Username and NIK already used")
         
@@ -80,6 +85,8 @@ class VisitorService:
     
 
     def identify_face_visitor(self,client_name:str,file:str)->Tuple[Visitor,Faces,List[Transaction]]:
+        get_client = self.client_repo.get_client()
+        client_name = get_client.client_name
         if client_name is None:
             client_name = CLIENT_NAME
         client_id = self.client_repo.get_client_id(client_name)

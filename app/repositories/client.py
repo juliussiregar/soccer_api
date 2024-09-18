@@ -45,6 +45,15 @@ class ClientRepository :
                 .first()
             )
 
+        return client.id
+    
+    def get_client(self):
+        with get_session() as db:
+            client = (
+                db.query(Client)
+                .first()
+            )
+
         return client
     
     def get_client_by_id(self,client_id:uuid.UUID):

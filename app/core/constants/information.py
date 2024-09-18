@@ -1,1 +1,1 @@
-CLIENT_NAME = "aluesa@gallery"
+CLIENT_NAME = "poc@gallery"
