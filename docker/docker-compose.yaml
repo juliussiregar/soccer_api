@@ -1,22 +1,22 @@
 version: "3.8"
 
 services:
-  # nginx:
-  #   image: linuxserver/swag
-  #   cap_add:
-  #     - NET_ADMIN
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"
-  #   volumes:
-  #     - ./nginx:/config/nginx
-  #     - ./../uploads:/uploads
-  #   environment:
-  #     PUID: 1003
-  #     PGID: 1003
-  #     TZ: Asia/Jakarta
-  #     URL: api-solid.aluesagd.com
-  #     VALIDATION: http
+  nginx:
+    image: linuxserver/swag
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx:/config/nginx
+      - ./../uploads:/uploads
+    environment:
+      PUID: 1003
+      PGID: 1003
+      TZ: Asia/Jakarta
+      URL: visitorms.aluesagd.com
+      VALIDATION: http
 
   postgres:
     image: postgres:13-alpine
