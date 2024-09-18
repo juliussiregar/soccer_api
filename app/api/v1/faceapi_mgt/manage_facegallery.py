@@ -17,12 +17,12 @@ auth_service = AuthService()
 
 
 @router.post("/create-facegallery")
-def create_facegallery(auth_user: Annotated[AuthUser, Depends(jwt_middleware)],request_body: CreateFaceGallery):
+def create_facegallery(auth_user: Annotated[AuthUser, Depends(jwt_middleware)],client_name:str):
     auth_service.has_role(auth_user.id, ROLE_ADMIN)
     try:
         # Menggunakan klien API untuk mengirim data
         # result = clients.create_facegallery(request_body)
-        result = client_service.insert_facegallery(request_body)
+        result = client_service.insert_facegallery(client_name)
         return result
     except HTTPException as e:
         raise HTTPException(status_code=e.status_code, detail=e.detail)

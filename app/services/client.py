@@ -23,13 +23,15 @@ class ClientService :
         self.clients =FaceApiClient()
         self.client_repo =ClientRepository()
 
-    def insert_facegallery(self,payload:CreateFaceGallery)->Client:
-        is_facegalleries_exist = self.facegallery_repo.is_facegalleries_used(payload.client_name)
+    def insert_facegallery(self,client_name:str)->Client:
+        is_facegalleries_exist = self.client_repo.is_facegalleries_used(client_name)
         if is_facegalleries_exist: 
             raise UnprocessableException("Client already Exists")
         try:
-            client = self.client_repo.insert()
-            facegallery = self.clients.create_facegallery(payload)
+            client = self.client_repo.insert(client_name)
+            if client:
+                payload = CreateFaceGallery(facegallery_id=client_name,trx_id=str(client.id))
+                facegallery = self.clients.create_facegallery(payload)            
         except Exception as err:
             err_msg = str(err)
             logger.error(err_msg)

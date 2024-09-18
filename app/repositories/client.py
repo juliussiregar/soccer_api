@@ -13,9 +13,17 @@ from app.schemas.faceapi_mgt import CreateFaceGallery
 from app.models.client import Client
 
 class ClientRepository :
-    def insert(self, payload: CreateFaceGallery) -> Client:
+    def insert(self, client_name:str) -> Client:
         client = Client()
-        pass
+        client.client_name = client_name
+        client.created_at = get_now()
+        with get_session() as db:
+            db.add(client)
+            db.flush()
+            db.commit()
+            db.refresh(client)
+
+        return client
 
     def insert_client(self,client_name:str) -> Client:
         client = Client()
@@ -37,7 +45,7 @@ class ClientRepository :
                 .first()
             )
 
-        return client.id
+        return client
     
     def get_client_by_id(self,client_id:uuid.UUID):
         with get_session() as db:

@@ -3,7 +3,7 @@ from typing import Optional
 
 
 class CreateFaceGallery(BaseModel):
-    client_name: str
+    facegallery_id: str
     trx_id: Optional[str] = None 
 
 
