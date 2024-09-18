@@ -6,6 +6,7 @@ from fastapi import HTTPException, status
 from typing import Any, Dict, List, Tuple
 
 from app.core.config import settings
+from app.utils.exception import InternalErrorException
 from app.utils.logger import logger
 from app.schemas.faceapi_mgt import CreateEnrollFace, CreateFaceGallery,GetEnrollFace,IdentifyFace
 # from app.repository.integration import IntegrationLogRepository
@@ -166,13 +167,14 @@ class FaceApiClient:
         response = requests.post(url, json=payload_json, headers=self.headers)
         response.raise_for_status()  # Raise exception for HTTP errors
         is_ok = response.status_code != status.HTTP_200_OK
-
         if is_ok:
             logger.error(
                 f"RISETAI - POST FaceGallery {response.status_code} : {response.content}"
             )
         else:
             body = response.json().get("risetai")
+            if int(body["status"]) != status.HTTP_200_OK:
+                raise HTTPException(status_code=int(body["status"]), detail=body["status_message"])
             data = body["return"]
         
         if body is None:
