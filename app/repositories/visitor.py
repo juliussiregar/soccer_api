@@ -9,7 +9,7 @@ from app.utils.date import get_now
 from app.utils.etc import id_generator
 
 from app.utils.exception import UnprocessableException
-from app.schemas.visitor import CreateNewVisitor
+from app.schemas.visitor import CreateNewVisitor, VisitorFilter
 from app.models.visitor import Visitor
 from app.models.face import Faces
 from app.repositories.client import ClientRepository
@@ -51,6 +51,35 @@ class VisitorRepository :
                 )
 
         return visitor.id
+    
+    def filtered(self, query: Query, filter: VisitorFilter) -> Query:
+        if filter.search is not None:
+            query = query.filter(Visitor.username == filter.search)
+            # TODO: Add other columns to search
+
+        return query
+    
+    def get_all_filtered(self, filter: VisitorFilter) -> List[Visitor]:
+        with get_session() as db:
+            query = db.query(Visitor)
+
+            query = self.filtered(query, filter).order_by(Visitor.created_at.desc())
+
+            if filter.limit is not None:
+                query = query.limit(filter.limit)
+
+            if filter.page is not None and filter.limit is not None:
+                offset = (filter.page - 1) * filter.limit
+                query = query.offset(offset)
+
+            return query.options(joinedload(Visitor.face), joinedload(Visitor.client)).all()
+    def count_by_filter(self, filter: VisitorFilter) -> int:
+        with get_session() as db:
+            query = db.query(Visitor)
+
+            query = self.filtered(query, filter)
+
+            return query.count()
 
                 
     def insert(self, payload: CreateNewVisitor) -> Visitor:

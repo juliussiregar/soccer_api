@@ -1,6 +1,7 @@
 import base64
 from typing import List, Tuple
 import uuid
+from app.schemas.user_mgt import UserFilter
 from app.services.face import FaceService
 from app.repositories.transaction import TransactionRepository
 from app.schemas.visitor import CreateNewVisitor,Face,GetVisitor,IdentifyVisitorFace
@@ -72,12 +73,18 @@ class VisitorService:
         return visitor,client,face,transaction,face_api
     
 
+    def list(self,filter: UserFilter)->Tuple[Visitor,Faces]:
+        visitors = self.visitor_repo.get_all_filtered(filter)
+
+        total_rows = self.visitor_repo.count_by_filter(filter)
+        total_pages = (total_rows + filter.limit - 1) // filter.limit
+        return visitors, total_rows, total_pages
+
     def get_visitor(self,username:str,nik:str)->Tuple[Visitor,Faces]:
         visitor = self.visitor_repo.get_visitor(username,nik)
         if visitor is None:
             raise UnprocessableException("Username or NIK not found")
         visitor_id = self.visitor_repo.get_visitorid(username,nik)
-        print(visitor_id)
         if visitor_id is None:
             raise UnprocessableException("Visitor ID not found")
         visitor_face = self.face_repo.get_face_byvisitorid(visitor_id)

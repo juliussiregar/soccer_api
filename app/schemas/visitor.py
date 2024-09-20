@@ -3,6 +3,11 @@ from typing import List, Optional
 from datetime import date, datetime
 
 
+class VisitorFilter(BaseModel):
+    limit: Optional[int] = None
+    page: Optional[int] = None
+    search: Optional[str] = None
+
 class Face (BaseModel):
     image : Optional[str] = None
     trx_id : Optional[str] = None

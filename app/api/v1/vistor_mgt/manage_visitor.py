@@ -2,7 +2,7 @@ import base64
 from fastapi import  HTTPException,APIRouter, Depends, File, UploadFile
 from typing import Optional, Annotated
 from app.core.constants.auth import ROLE_ADMIN
-from app.schemas.visitor import CreateNewVisitor,GetVisitor,IdentifyVisitorFace
+from app.schemas.visitor import CreateNewVisitor,VisitorFilter
 from app.schemas.faceapi_mgt import CreateEnrollFace,GetEnrollFace,IdentifyFace
 
 from app.clients.face_api import FaceApiClient
@@ -56,7 +56,35 @@ def register_visitor(auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
         }
     }
 
+@router.get('/get-all-visitor')
+def get_visitorbyuser(auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
+    limit: int = 100,
+    page: int = 1,
+    q: Optional[str] = None):
+    auth_service.has_role(auth_user.id, ROLE_ADMIN)
+    filter = VisitorFilter(limit=limit, page=page, search=q)
 
+    visitors, total_rows, total_pages = visitor_service.list(filter)
+
+    return {
+        "data": [
+            {
+                "id": visitor.id,
+                "username": visitor.username,
+                "face": [face.id for face in visitor.face],
+                "client": visitor.client.client_name,
+                "created_at": visitor.created_at,
+                "updated_at": visitor.updated_at,
+            }
+            for visitor in visitors
+        ],
+        "meta": {
+            "limit": limit,
+            "page": page,
+            "total_rows": total_rows,
+            "total_pages": total_pages,
+        },
+    }
 @router.get('/get-visitor')
 def get_visitorbyuser(auth_user: Annotated[AuthUser, Depends(jwt_middleware)],username:str,nik:str):
     auth_service.has_role(auth_user.id, ROLE_ADMIN)
