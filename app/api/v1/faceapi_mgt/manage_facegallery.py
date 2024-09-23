@@ -17,8 +17,10 @@ auth_service = AuthService()
 
 
 @router.post("/create-facegallery")
-def create_facegallery(auth_user: Annotated[AuthUser, Depends(jwt_middleware)],client_name:str):
-    auth_service.has_role(auth_user.id, ROLE_ADMIN)
+def create_facegallery(
+    # auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
+    client_name:str):
+    # auth_service.has_role(auth_user.id, ROLE_ADMIN)
     try:
         # Menggunakan klien API untuk mengirim data
         # result = clients.create_facegallery(request_body)
@@ -28,8 +30,10 @@ def create_facegallery(auth_user: Annotated[AuthUser, Depends(jwt_middleware)],c
         raise HTTPException(status_code=e.status_code, detail=e.detail)
 
 @router.get("/my-facegalleries")
-def get_facegalleries(auth_user: Annotated[AuthUser, Depends(jwt_middleware)]):
-    auth_service.has_role(auth_user.id, ROLE_ADMIN)
+def get_facegalleries(
+    # auth_user: Annotated[AuthUser, Depends(jwt_middleware)]
+    ):
+    # auth_service.has_role(auth_user.id, ROLE_ADMIN)
     try:
         # Menggunakan klien API untuk mengirim data
         result = clients.get_facegallery()

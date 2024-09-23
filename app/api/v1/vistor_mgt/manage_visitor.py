@@ -18,9 +18,10 @@ visitor_service = VisitorService()
 
 
 @router.post('/register/visitor' ,description="Create new Visitor With Upload Picture")
-def register_visitor(auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
+def register_visitor(
+    # auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
     request_body:CreateNewVisitor=Depends(),file: UploadFile = File(...)):
-    auth_service.has_role(auth_user.id, ROLE_ADMIN)
+    # auth_service.has_role(auth_user.id, ROLE_ADMIN)
     visitors,clients,faces,transactions,face_api= visitor_service.create_visitor(request_body,file)
 
     return {
@@ -57,11 +58,12 @@ def register_visitor(auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
     }
 
 @router.get('/get-all-visitor')
-def get_visitorbyuser(auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
+def get_visitorbyuser(
+    # auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
     limit: int = 100,
     page: int = 1,
     q: Optional[str] = None):
-    auth_service.has_role(auth_user.id, ROLE_ADMIN)
+    # auth_service.has_role(auth_user.id, ROLE_ADMIN)
     filter = VisitorFilter(limit=limit, page=page, search=q)
 
     visitors, total_rows, total_pages = visitor_service.list(filter)
@@ -86,8 +88,10 @@ def get_visitorbyuser(auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
         },
     }
 @router.get('/get-visitor')
-def get_visitorbyuser(auth_user: Annotated[AuthUser, Depends(jwt_middleware)],username:str,nik:str):
-    auth_service.has_role(auth_user.id, ROLE_ADMIN)
+def get_visitorbyuser(
+    # auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
+    username:str,nik:str):
+    # auth_service.has_role(auth_user.id, ROLE_ADMIN)
     visitor,visitor_face = visitor_service.get_visitor(username,nik)
 
     return {
@@ -98,8 +102,10 @@ def get_visitorbyuser(auth_user: Annotated[AuthUser, Depends(jwt_middleware)],us
     }
 
 @router.post('/identify-face-visitor')
-def identify_face(auth_user: Annotated[AuthUser, Depends(jwt_middleware)], client_name:Optional[str]=None,file: UploadFile = File(...)):
-    auth_service.has_role(auth_user.id, ROLE_ADMIN)
+def identify_face(
+    # auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
+    client_name:Optional[str]=None,file: UploadFile = File(...)):
+    # auth_service.has_role(auth_user.id, ROLE_ADMIN)
     result ,trancation= visitor_service.identify_face_visitor(client_name,file)   
 
     return {

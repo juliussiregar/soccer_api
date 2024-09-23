@@ -17,9 +17,10 @@ user_service = UserService()
 
 @router.post("/register")
 def user_create(
-    auth_user: Annotated[AuthUser, Depends(jwt_middleware)], body: RekanRegister
+    # auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
+    body: RekanRegister
 ):
-    auth_service.has_role(auth_user.id, ROLE_ADMIN)
+    # auth_service.has_role(auth_user.id, ROLE_ADMIN)
 
     user = user_service.register(body)
 
@@ -37,9 +38,10 @@ def user_create(
 
 @router.put("/change_password/{id}")
 def user_update(
-    auth_user: Annotated[AuthUser, Depends(jwt_middleware)], id: int, body: RegisterUpdate
+    # auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
+    id: int, body: RegisterUpdate
 ):
-    auth_service.has_role(auth_user.id, ROLE_ADMIN)
+    # auth_service.has_role(auth_user.id, ROLE_ADMIN)
 
     user = user_service.update_password(id, body)
 

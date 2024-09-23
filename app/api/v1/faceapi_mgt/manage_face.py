@@ -12,8 +12,10 @@ router = APIRouter()
 auth_service = AuthService()
 
 @router.post("/enroll-face")
-async def create_enroll_face(auth_user: Annotated[AuthUser, Depends(jwt_middleware)],request_body: CreateEnrollFace = Depends(),file: UploadFile = File(...)):
-    auth_service.has_role(auth_user.id, ROLE_ADMIN)
+async def create_enroll_face(
+    # auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
+    request_body: CreateEnrollFace = Depends(),file: UploadFile = File(...)):
+    # auth_service.has_role(auth_user.id, ROLE_ADMIN)
     try:
         file_content = await file.read()
         
@@ -24,8 +26,10 @@ async def create_enroll_face(auth_user: Annotated[AuthUser, Depends(jwt_middlewa
         raise HTTPException(status_code=e.status_code, detail=e.detail)
     
 @router.get("/list-faces")
-def get_enroll_face(auth_user: Annotated[AuthUser, Depends(jwt_middleware)],facegallery_id:str,trx_id:str):
-    auth_service.has_role(auth_user.id, ROLE_ADMIN)
+def get_enroll_face(
+    # auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
+    facegallery_id:str,trx_id:str):
+    # auth_service.has_role(auth_user.id, ROLE_ADMIN)
     try:
         # Menggunakan klien API untuk mengirim data
         result = client.get_listface(facegallery_id,trx_id)
@@ -35,8 +39,10 @@ def get_enroll_face(auth_user: Annotated[AuthUser, Depends(jwt_middleware)],face
 
 
 @router.post("/identify-face")
-async def create_enroll_face(auth_user: Annotated[AuthUser, Depends(jwt_middleware)],request_body: IdentifyFace = Depends(),file: UploadFile = File(...)):
-    auth_service.has_role(auth_user.id, ROLE_ADMIN)
+async def create_enroll_face(
+    # auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
+    request_body: IdentifyFace = Depends(),file: UploadFile = File(...)):
+    # auth_service.has_role(auth_user.id, ROLE_ADMIN)
     try:
         file_content = await file.read()
         value = client.identify_face(request_body,file_content)
