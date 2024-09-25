@@ -4,7 +4,7 @@ import uuid
 from app.schemas.user_mgt import UserFilter
 from app.services.face import FaceService
 from app.repositories.transaction import TransactionRepository
-from app.schemas.visitor import CreateNewVisitor,Face,GetVisitor,IdentifyVisitorFace
+from app.schemas.visitor import CreateNewVisitor,Face,GetVisitor, IdentifyVisitor,IdentifyVisitorFace
 from app.schemas.faceapi_mgt import CreateEnrollFace,IdentifyFace
 from app.repositories.visitor import VisitorRepository
 from app.repositories.client import ClientRepository
@@ -30,24 +30,28 @@ class VisitorService:
         self.trx_repo = TransactionRepository()
         self.face_api_clients = FaceApiClient()
 
-    def create_visitor(self,payload:CreateNewVisitor, file:str) -> Tuple[Client,Visitor, Faces,Transaction]:
-        is_username_exist = self.visitor_repo.is_username_used(payload.username)
+    def create_visitor(self,payload:CreateNewVisitor) -> Tuple[Client,Visitor, Faces,Transaction]:
         is_nik_exist = self.visitor_repo.is_nik_used(payload.nik)
         get_client = self.client_repo.get_client()
         payload.client_name = get_client.client_name
-
+        split_fullname = payload.full_name.split()
+        username_visitor =  f"{split_fullname[0]}"
+        is_username_exist = self.visitor_repo.is_username_used(username_visitor)
+      
         if get_client is None:
             raise UnprocessableException("Client not found")
         
         if is_username_exist and is_nik_exist:
             raise UnprocessableException("Username and NIK already used")
+        else:
+            payload.username = username_visitor
         
         if payload.client_name is None :
             payload.client_name = CLIENT_NAME
         
         
-        encoded_string = self.face_service.encode_image(file)
-        payload.image = encoded_string
+        # encoded_string = self.face_service.encode_image(file)
+        # payload.image = encoded_string
     
 
         try :
@@ -57,7 +61,7 @@ class VisitorService:
                 user_id=str(visitor.nik),
                 user_name=visitor.username,
                 facegallery_id=client.client_name,
-                image=encoded_string,
+                image=payload.image,
                 trx_id=str(trx_id)
             )
             face_api,url = self.face_api_clients.insert_faces_visitor(enroll)
@@ -91,7 +95,7 @@ class VisitorService:
         return visitor ,visitor_face
     
 
-    def identify_face_visitor(self,client_name:str,file:str)->Tuple[Visitor,Faces,List[Transaction]]:
+    def identify_face_visitor_image(self,client_name:str,file:str)->Tuple[Visitor,Faces,List[Transaction]]:
         get_client = self.client_repo.get_client()
         client_name = get_client.client_name
         if client_name is None:
@@ -100,11 +104,11 @@ class VisitorService:
         if client_id is None :
             raise UnprocessableException("Client not found")
         try:
-            encoded_string = self.face_service.encode_image(file)
+            # encoded_string = self.face_service.encode_image(file)
             trx_id = uuid.uuid4()
             identify = IdentifyFace(
                 facegallery_id=client_name,
-                image=encoded_string,
+                image=file,
                 trx_id=str(trx_id)
             )
             url ,data = self.face_api_clients.identify_face_visitor(identify)
@@ -124,6 +128,39 @@ class VisitorService:
 
 
         return visitor,transaction
+    
+    def identify_face_visitor(self,payload:IdentifyVisitor)->Tuple[Visitor,Faces,List[Transaction]]:
+        get_client = self.client_repo.get_client()
+        payload.client_name = get_client.client_name
+        if payload.client_name is None:
+            payload.client_name = CLIENT_NAME
+        client_id = self.client_repo.get_client_id(payload.client_name)
+        if client_id is None :
+            raise UnprocessableException("Client not found")
+        try:
+            trx_id = uuid.uuid4()
+            identify = IdentifyFace(
+                facegallery_id=payload.client_name,
+                image=payload.image,
+                trx_id=str(trx_id)
+            )
+            url ,data = self.face_api_clients.identify_face_visitor(identify)
+            user_id = data[0].get("user_id")
+            
+            check_visitor = self.visitor_repo.is_nik_used(user_id)
+            if check_visitor :
+                visitor = self.visitor_repo.get_visitor_bynik(user_id)
+                transaction = self.trx_repo.insert_transaction(trx_id,visitor.id,client_id,url)
+            else:
+                raise UnprocessableException('VISITOR NOT VALID')
+        except Exception as err:
+            err_msg = str(err)
+            logger.error(err_msg)
+            raise InternalErrorException(err_msg)
+
+
+
+        return visitor
 
 
     

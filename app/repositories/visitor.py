@@ -94,9 +94,11 @@ class VisitorRepository :
 
         visitor = Visitor()
         visitor.username = payload.username
+        visitor.full_name =payload.full_name
         visitor.nik = payload.nik
         visitor.born_date = payload.born_date
         visitor.company = payload.company_name
+        visitor.address = payload.address
         visitor.email = payload.email
         visitor.client_id = client_id
         visitor.created_at = get_now()

@@ -1,21 +1,38 @@
-from datetime import datetime
+from datetime import datetime,date
 from typing import List, Optional, Tuple
 import uuid
 from passlib.context import CryptContext
 from sqlalchemy.orm import Query, joinedload
-from sqlalchemy import insert
+from sqlalchemy import extract, insert
 
 from app.core.database import get_session
+from app.schemas.visitor import VisitorFilter
 from app.utils.date import get_now
 from app.utils.etc import id_generator
 from app.models.attendance import Attendance
-from app.schemas.attendance_mgt import CreateCheckIn,UpdateCheckOut
+from app.schemas.attendance_mgt import AttendanceFilter, CreateCheckIn,UpdateCheckOut
 
 from app.utils.exception import UnprocessableException
 
 
 
 class AttendanceRepository :
+
+
+    def get_all_filtered(self, filter_date: date) -> List[Attendance]:
+        with get_session() as db:
+            return (
+                db.query(Attendance)
+                .options(joinedload(Attendance.visitor))
+                .filter(
+                        extract('month', Attendance.created_at) == filter_date.month,
+                        extract('year', Attendance.created_at) == filter_date.year,
+                        extract('day', Attendance.created_at) == filter_date.day
+                        )
+                .order_by(Attendance.created_at.desc())
+                .all()
+            )
+
 
     def insert_attendance_checkin(self,payload:CreateCheckIn)->Attendance:
         attendance = Attendance()

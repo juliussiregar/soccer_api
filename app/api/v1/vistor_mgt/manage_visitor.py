@@ -2,7 +2,7 @@ import base64
 from fastapi import  HTTPException,APIRouter, Depends, File, UploadFile
 from typing import Optional, Annotated
 from app.core.constants.auth import ROLE_ADMIN
-from app.schemas.visitor import CreateNewVisitor,VisitorFilter
+from app.schemas.visitor import CreateNewVisitor,VisitorFilter,IdentifyVisitor
 from app.schemas.faceapi_mgt import CreateEnrollFace,GetEnrollFace,IdentifyFace
 
 from app.clients.face_api import FaceApiClient
@@ -20,14 +20,16 @@ visitor_service = VisitorService()
 @router.post('/register/visitor' ,description="Create new Visitor With Upload Picture")
 def register_visitor(
     # auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
-    request_body:CreateNewVisitor=Depends(),file: UploadFile = File(...)):
+    # request_body:CreateNewVisitor=Depends(),file: UploadFile = File(...)):
+    request_body : CreateNewVisitor):
     # auth_service.has_role(auth_user.id, ROLE_ADMIN)
-    visitors,clients,faces,transactions,face_api= visitor_service.create_visitor(request_body,file)
+    visitors,clients,faces,transactions,face_api= visitor_service.create_visitor(request_body)
 
     return {
         "data": {
             "visitor": {
                 "id": visitors.id,
+                "full_name": visitors.full_name,
                 "username": visitors.username,
                 "nik": visitors.nik,
                 "born_date": visitors.born_date,
@@ -57,8 +59,8 @@ def register_visitor(
         }
     }
 
-@router.get('/get-all-visitor')
-def get_visitorbyuser(
+@router.get('/visitors')
+def get_visitors(
     # auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
     limit: int = 100,
     page: int = 1,
@@ -69,12 +71,14 @@ def get_visitorbyuser(
     visitors, total_rows, total_pages = visitor_service.list(filter)
 
     return {
-        "data": [
+        "visitors": [
             {
                 "id": visitor.id,
-                "username": visitor.username,
-                "face": [face.id for face in visitor.face],
-                "client": visitor.client.client_name,
+                "nik":visitor.nik,
+                "full_name": visitor.full_name,
+                "company_name": visitor.company,
+                "born_date": visitor.born_date.strftime("%d-%m-%Y"),
+                "image": [face.image_base64 for face in visitor.face],
                 "created_at": visitor.created_at,
                 "updated_at": visitor.updated_at,
             }
@@ -104,20 +108,21 @@ def get_visitorbyuser(
 @router.post('/identify-face-visitor')
 def identify_face(
     # auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
-    client_name:Optional[str]=None,file: UploadFile = File(...)):
+    # client_name:Optional[str]=None,
+    # ,file: UploadFile = File(...)
+    request_body: IdentifyVisitor
+    ):
     # auth_service.has_role(auth_user.id, ROLE_ADMIN)
-    result ,trancation= visitor_service.identify_face_visitor(client_name,file)   
+    result = visitor_service.identify_face_visitor(request_body)   
 
     return {
         'status':200,
         'message':'Visitor is Valid',
-        'data':
+        'visitor':
             {
-                'user_name':result.username,
                 'nik':result.nik,
-                'email':result.email,
-                'company':result.company,
-                'transaction': trancation
-
+                'fullName': result.full_name,
+                "companyName": result.company,
+                'address':result.address,
             }
     } 

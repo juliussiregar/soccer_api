@@ -1,7 +1,9 @@
 from typing import List, Tuple
 from datetime import date, datetime, timedelta
+
+import pytz
 from app.services.visitor import VisitorService
-from app.schemas.visitor import CreateNewVisitor,Face,GetVisitor,IdentifyVisitorFace
+from app.schemas.visitor import CreateNewVisitor,Face,GetVisitor,IdentifyVisitorFace,IdentifyVisitor, VisitorFilter
 from app.schemas.faceapi_mgt import CreateEnrollFace,IdentifyFace
 from app.repositories.attendance import AttendanceRepository
 from app.schemas.attendance_mgt import CreateCheckIn,UpdateCheckOut
@@ -25,9 +27,13 @@ class AttendanceService:
     def get_start_of_day(self,dt: datetime):
         """Helper function to get start of the current day."""
         return dt.replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    def list(self,filter_date:date)->Tuple[Attendance,Visitor]:
+        visitors_today = self.attendance_repo.get_all_filtered(filter_date)
+        return visitors_today
 
-    def create(self,client_name:str,file:str)->Tuple[Visitor,List[Attendance]]:
-        identify_visitor,trx = self.visitor_service.identify_face_visitor(client_name,file)
+    def create(self,payload:IdentifyVisitor)->Tuple[Visitor,List[Attendance]]:
+        identify_visitor = self.visitor_service.identify_face_visitor(payload)
         today_start = self.get_start_of_day(datetime.utcnow())
         existing_attendance_today = self.attendance_repo.existing_attendance(identify_visitor.id,today_start)
         existing_by_id = self.attendance_repo.existing_attendance_id(identify_visitor.id)
@@ -46,7 +52,7 @@ class AttendanceService:
             attendance_check_in = CreateCheckIn(
                 visitor_id=identify_visitor.id,
                 client_id=identify_visitor.client_id,
-                check_in=get_now()
+                check_in=datetime.now(pytz.timezone('Asia/Jakarta'))
             )
             new_attendance = self.attendance_repo.insert_attendance_checkin(attendance_check_in)
         except Exception as err:
@@ -56,8 +62,8 @@ class AttendanceService:
         
         return new_attendance,identify_visitor
     
-    def update(self,client_name:str,file:str)->Tuple[Visitor,List[Attendance]]:
-        identify_visitor,trx = self.visitor_service.identify_face_visitor(client_name,file)
+    def update(self,payload:IdentifyVisitor)->Tuple[Visitor,List[Attendance]]:
+        identify_visitor = self.visitor_service.identify_face_visitor(payload)
         today_start = self.get_start_of_day(datetime.utcnow())
         existing_attendance = self.attendance_repo.existing_attendance(identify_visitor.id,today_start)
 
@@ -69,7 +75,7 @@ class AttendanceService:
             attendance_check_out = UpdateCheckOut(
                 visitor_id=identify_visitor.id,
                 client_id=identify_visitor.client_id,
-                check_out=get_now()
+                check_out=datetime.now(pytz.timezone('Asia/Jakarta'))
             )
             update_attendance = self.attendance_repo.update_attendance_checkout(attendance_check_out)
         except Exception as err:

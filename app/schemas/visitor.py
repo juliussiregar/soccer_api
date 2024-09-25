@@ -12,11 +12,17 @@ class Face (BaseModel):
     image : Optional[str] = None
     trx_id : Optional[str] = None
 
+class IdentifyVisitor(BaseModel):
+    image : str
+    client_name:Optional[str] = None
+
 class CreateNewVisitor(BaseModel):
-    username: str
+    username: Optional[str] = None
+    full_name: str
     nik : str
     born_date: date
-    email: Optional[str] = None
+    email: str
+    address:str
     company_name :str
     # faces : Optional[List[Face]] = None
     image : Optional[str] = None

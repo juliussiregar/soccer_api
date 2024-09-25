@@ -18,3 +18,8 @@ class AttendaceVisitor(BaseModel):
     client_id: uuid.UUID
     check_in:datetime
     check_out:datetime
+
+class AttendanceFilter(BaseModel):
+    limit: Optional[int] = None
+    page: Optional[int] = None
+    search: Optional[str] = None
