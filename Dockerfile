@@ -19,3 +19,8 @@ RUN python -m compileall -b . && find * | grep '\.py$' | xargs rm
 ARG VERSION
 ENV VERSION ${VERSION:-0.0.0-dev}
 ENV PYTHONUNBUFFERED=TRUE
+
+EXPOSE 8000
+
+# Start the FastAPI application
+# CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

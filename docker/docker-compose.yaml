@@ -2,21 +2,42 @@ version: "3.8"
 
 services:
   nginx:
-    image: linuxserver/swag
-    cap_add:
-      - NET_ADMIN
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx:/config/nginx
-      - ./../uploads:/uploads
-    environment:
-      PUID: 1003
-      PGID: 1003
-      TZ: Asia/Jakarta
-      URL: api-visitorms.aluesagd.com
-      VALIDATION: http
+      image: linuxserver/swag
+      depends_on:
+        - app
+      cap_add:
+        - NET_ADMIN
+      ports:
+        - "80:80"
+        - "443:443"
+      volumes:
+        - ./nginx:/config/nginx
+        - ./nginx/subdomain:/config/nginx/subdomain
+      environment:
+        PUID: 1003
+        PGID: 1003
+        TZ: Asia/Jakarta
+        URL: aluesagd.com
+        VALIDATION: http
+        SUBDOMAINS: api-visitorms
+        ONLY_SUBDOMAINS: true
+
+  # nginx:
+  #   image: linuxserver/swag
+  #   cap_add:
+  #     - NET_ADMIN
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx:/config/nginx
+  #     - ./../uploads:/uploads
+  #   environment:
+  #     PUID: 1003
+  #     PGID: 1003
+  #     TZ: Asia/Jakarta
+  #     URL: api-visitorms.aluesagd.com 
+  #     VALIDATION: http
 
   postgres:
     image: postgres:13-alpine
@@ -41,6 +62,17 @@ services:
     restart: unless-stopped
     ports:
       - :5432
+
+  dashboard:
+    image: visitorms-dashboard
+    depends_on:
+      - app
+    environment:
+      REACT_APP_API_URL: api-visitorms.aluesagd.com
+      TZ: Asia/Jakarta
+    restart: unless-stopped
+    ports:
+      - 8081:80
 
   app:
     image: visitorappimage
