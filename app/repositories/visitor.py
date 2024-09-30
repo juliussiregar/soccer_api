@@ -52,6 +52,16 @@ class VisitorRepository :
 
         return visitor.id
     
+    def get_visitor_by_id(self,id:uuid):
+        with get_session() as db:
+            visitor = (
+                db.query(Visitor)
+                .filter(Visitor.id == id)
+                .first()
+                )
+
+        return visitor
+    
     def filtered(self, query: Query, filter: VisitorFilter) -> Query:
         if filter.search is not None:
             query = query.filter(Visitor.username == filter.search)
@@ -146,3 +156,11 @@ class VisitorRepository :
             )
 
         return client_count > 0
+    
+    def delete_visitor_byid(self,id:uuid)->Visitor:
+        with get_session() as db:
+            visitor = db.query(Visitor).filter(Visitor.id == id).first()
+            db.delete(visitor)
+            db.commit()
+
+        return visitor

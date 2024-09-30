@@ -32,4 +32,15 @@ class FaceRepository :
                 )
 
         return face.visitor_id
+    
+    def delete_face_byuser_id(self,visitor_id=uuid)->Faces:
+        with get_session() as db:
+            face = (
+                db.query(Faces)
+                .filter(Faces.visitor_id == visitor_id)
+                .delete()
+                )
+            db.commit()
+
+        return face
         

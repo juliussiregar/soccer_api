@@ -1,4 +1,5 @@
 import base64
+import uuid
 from fastapi import  HTTPException,APIRouter, Depends, File, UploadFile
 from typing import Optional, Annotated
 from app.core.constants.auth import ROLE_ADMIN
@@ -126,3 +127,14 @@ def identify_face(
                 'address':result.address,
             }
     } 
+
+@router.delete('/visitors/{id}')
+def delete_visitor(
+    # auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
+    id: uuid.UUID):
+    # auth_service.has_role(auth_user.id, ROLE_ADMIN)
+    visitors = visitor_service.delete_visitor(id)
+
+    return {
+        "data": "Deleted Success"
+    }

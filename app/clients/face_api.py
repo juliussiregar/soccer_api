@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Tuple
 from app.core.config import settings
 from app.utils.exception import InternalErrorException
 from app.utils.logger import logger
-from app.schemas.faceapi_mgt import CreateEnrollFace, CreateFaceGallery,GetEnrollFace,IdentifyFace
+from app.schemas.faceapi_mgt import CreateEnrollFace, CreateFaceGallery, DeleteVisitor,GetEnrollFace,IdentifyFace
 # from app.repository.integration import IntegrationLogRepository
 # from app.schema.integration import IntegrationLogCreate
 from app.core.constants.request import REQUEST_GET, REQUEST_POST
@@ -183,4 +183,24 @@ class FaceApiClient:
         if int(body["status"]) != status.HTTP_200_OK:
             raise HTTPException(status_code=int(body["status"]), detail=body["status_message"])
         return url,data
+    
+    def delete_visitor(self,payload:DeleteVisitor):
+        url = f"{self.base_url}/risetai/face-api/facegallery/delete-face"
+        payload_json = payload.dict()
+        response = requests.post(url, json=payload_json, headers=self.headers)
+        response.raise_for_status()  # Raise exception for HTTP errors
+        is_ok = response.status_code != status.HTTP_200_OK
+        if is_ok:
+            logger.error(
+                f"RISETAI - POST FaceGallery {response.status_code} : {response.content}"
+            )
+        else:
+            body = response.json().get("risetai")
+        
+        if body is None:
+            return None
+        
+        if int(body["status"]) != status.HTTP_200_OK:
+            raise HTTPException(status_code=int(body["status"]), detail=body["status_message"])
+        return body
     

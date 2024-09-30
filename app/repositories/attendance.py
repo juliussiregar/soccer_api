@@ -91,5 +91,12 @@ class AttendanceRepository :
             )
 
         return ci_status
+    
+    def delete_attendance_byuser_id(self,visitor_id=uuid)->Attendance:
+        with get_session() as db:
+            ci_status = db.query(Attendance).filter(Attendance.visitor_id == visitor_id).delete()
+            db.commit()
+
+        return ci_status
 
     

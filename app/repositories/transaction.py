@@ -77,3 +77,14 @@ class TransactionRepository :
             )
 
         return trx
+
+    def delete_transaction_byuser_id(self,visitor_id:uuid)->Transaction:
+        with get_session() as db:
+            trx = (
+                db.query(Transaction)
+                .filter(Transaction.visitor_id == visitor_id)
+                .delete()
+            )
+            db.commit()
+
+        return trx

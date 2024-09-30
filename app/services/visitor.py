@@ -1,6 +1,8 @@
 import base64
 from typing import List, Tuple
 import uuid
+from app.models.attendance import Attendance
+from app.repositories.attendance import AttendanceRepository
 from app.schemas.user_mgt import UserFilter
 from app.services.face import FaceService
 from app.repositories.transaction import TransactionRepository
@@ -28,6 +30,7 @@ class VisitorService:
         self.client_repo = ClientRepository()
         self.face_repo = FaceRepository()
         self.trx_repo = TransactionRepository()
+        self.attendance_repo = AttendanceRepository()
         self.face_api_clients = FaceApiClient()
 
     def create_visitor(self,payload:CreateNewVisitor) -> Tuple[Client,Visitor, Faces,Transaction]:
@@ -162,8 +165,27 @@ class VisitorService:
 
         return visitor
 
+    def delete_visitor(self,id:uuid)->Tuple[Visitor,Faces,Transaction,Attendance]:
+        visitor = self.visitor_repo.get_visitor_by_id(id)
+        if visitor is None:
+            raise UnprocessableException("Visitor not found")
+        visitor_face = self.face_repo.get_face_byvisitorid(visitor.id)
+        if visitor_face is None:
+            raise UnprocessableException("Visitor face not found")
+        client = self.client_repo.get_client_by_id(visitor.client_id)
+        try:
+            transaction = self.trx_repo.delete_transaction_byuser_id(visitor.id)
+            attendance = self.attendance_repo.delete_attendance_byuser_id(visitor.id)
+            face = self.face_repo.delete_face_byuser_id(visitor.id)
+            visitor = self.visitor_repo.delete_visitor_byid(visitor.id)
+        except Exception as err:
+            err_msg = str(err)
+            logger.error(err_msg)
+            raise InternalErrorException(err_msg)
+        return visitor
 
-    
+
+
     # def encode_image(self,path_image:str):
     #     file_content = path_image.file.read()
     #     with open(path_image.filename, "wb") as f:

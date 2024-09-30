@@ -46,7 +46,7 @@ def get_attendances_today(
 @router.get('/visitor-monitoring/visitors-by-date')
 def get_attendances_by_day(
     # auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
-    date: date = datetime.now().date(),
+    date: date ,
     ):
     # auth_service.has_role(auth_user.id, ROLE_ADMIN)
     
@@ -88,7 +88,7 @@ def attendance_check_in(
                     'check_out':attendances.Check_out,
                     'created_at':attendances.created_at
                 },
-                'message':"Check-In Successful!"
+                'message':"Check-In Successful!, WELCOME!!"
 
             }        
     } 
@@ -116,7 +116,7 @@ def attendance_check_out(
                     'check_out':attendances.Check_out,
                     'created_at':attendances.created_at
                 },
-                'message':"Check-Out Successful!"
+                'message':"Check-Out Successful! , SEE YOUUU"
 
             }        
     } 
