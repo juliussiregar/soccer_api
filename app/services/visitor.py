@@ -181,7 +181,7 @@ class VisitorService:
             payload = DeleteVisitor(
                 user_id=visitor.nik,
                 facegallery_id= client.client_name,
-                trx_id=trx_id
+                trx_id=str(trx_id)
 
             )
             client_delete = self.face_api_clients.delete_visitor(payload)
