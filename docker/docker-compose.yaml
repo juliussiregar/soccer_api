@@ -3,8 +3,6 @@ version: "3.8"
 services:
   nginx:
       image: linuxserver/swag
-      depends_on:
-        - app
       cap_add:
         - NET_ADMIN
       ports:
@@ -19,25 +17,9 @@ services:
         TZ: Asia/Jakarta
         URL: aluesagd.com
         VALIDATION: http
-        SUBDOMAINS: api-visitorms
+        SUBDOMAINS: api-visitorms, dashboard-vms
         ONLY_SUBDOMAINS: true
-
-  # nginx:
-  #   image: linuxserver/swag
-  #   cap_add:
-  #     - NET_ADMIN
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"
-  #   volumes:
-  #     - ./nginx:/config/nginx
-  #     - ./../uploads:/uploads
-  #   environment:
-  #     PUID: 1003
-  #     PGID: 1003
-  #     TZ: Asia/Jakarta
-  #     URL: api-visitorms.aluesagd.com 
-  #     VALIDATION: http
+        restart: unless-stopped
 
   postgres:
     image: postgres:13-alpine

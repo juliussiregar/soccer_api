@@ -6,6 +6,7 @@ from app.repositories.attendance import AttendanceRepository
 from app.schemas.user_mgt import UserFilter
 from app.services.face import FaceService
 from app.repositories.transaction import TransactionRepository
+from app.schemas.faceapi_mgt import DeleteVisitor
 from app.schemas.visitor import CreateNewVisitor,Face,GetVisitor, IdentifyVisitor,IdentifyVisitorFace
 from app.schemas.faceapi_mgt import CreateEnrollFace,IdentifyFace
 from app.repositories.visitor import VisitorRepository
@@ -173,7 +174,17 @@ class VisitorService:
         if visitor_face is None:
             raise UnprocessableException("Visitor face not found")
         client = self.client_repo.get_client_by_id(visitor.client_id)
+        if client is None:
+            raise UnprocessableException("Client not found")
         try:
+            trx_id = uuid.uuid4()
+            payload = DeleteVisitor(
+                user_id=visitor.nik,
+                facegallery_id= client.client_name,
+                trx_id=trx_id
+
+            )
+            client_delete = self.face_api_clients.delete_visitor(payload)
             transaction = self.trx_repo.delete_transaction_byuser_id(visitor.id)
             attendance = self.attendance_repo.delete_attendance_byuser_id(visitor.id)
             face = self.face_repo.delete_face_byuser_id(visitor.id)
