@@ -88,7 +88,7 @@ def attendance_check_in(
                     'check_out':attendances.Check_out,
                     'created_at':attendances.created_at
                 },
-                'message':"Check-In Successful!, WELCOME!!"
+                'message':"Check-In Successful!, Welcome"
 
             }        
     } 
@@ -116,7 +116,7 @@ def attendance_check_out(
                     'check_out':attendances.Check_out,
                     'created_at':attendances.created_at
                 },
-                'message':"Check-Out Successful! , SEE YOUUU"
+                'message':"Check-Out Successful! , See You"
 
             }        
     } 

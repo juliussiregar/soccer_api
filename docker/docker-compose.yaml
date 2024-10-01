@@ -10,7 +10,7 @@ services:
         - "443:443"
       volumes:
         - ./nginx:/config/nginx
-        - ./nginx/subdomain:/config/nginx/subdomain
+        - ./../uploads:/uploads
       environment:
         PUID: 1003
         PGID: 1003
