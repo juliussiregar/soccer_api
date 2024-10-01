@@ -187,7 +187,7 @@ class FaceApiClient:
     def delete_visitor(self,payload:DeleteVisitor):
         url = f"{self.base_url}/risetai/face-api/facegallery/delete-face"
         payload_json = payload.dict()
-        response = requests.post(url, json=payload_json, headers=self.headers)
+        response = requests.delete(url, json=payload_json, headers=self.headers)
         response.raise_for_status()  # Raise exception for HTTP errors
         is_ok = response.status_code != status.HTTP_200_OK
         if is_ok:
