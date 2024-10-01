@@ -1,0 +1,6 @@
+# Ignore all files in this folder
+__pycache__/
+venv
+postgres-data
+.vscode
+.env
