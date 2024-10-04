@@ -23,7 +23,7 @@ attendance_service = AttendanceService()
 @router.get('/visitor-monitoring/visitors-today')
 def get_attendances_today(
     # auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
-    date: date = datetime.now().date(),
+    date: date ,
     ):
     # auth_service.has_role(auth_user.id, ROLE_ADMIN)
     
