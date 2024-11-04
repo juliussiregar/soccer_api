@@ -3,7 +3,6 @@ __pycache__/
 venv
 postgres-data
 .vscode
-.env
 .DS_Store
 .idea
 *.conf.sample
