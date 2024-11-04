@@ -23,6 +23,7 @@ class Visitor(Base):
     face = relationship("Faces", back_populates="visitor")
     transaction = relationship("Transaction",back_populates="visitor")
     attendance = relationship("Attendance",back_populates="visitor")
+    attendance_local = relationship("AttendanceLocal",back_populates="visitor")
     client = relationship("Client", back_populates="visitor")
 
 
