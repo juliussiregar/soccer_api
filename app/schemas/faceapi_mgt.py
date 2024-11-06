@@ -36,6 +36,9 @@ class IdentifyFace(BaseModel):
     image: Optional[str] = None
     trx_id:Optional[str] = None
 
+class IdentifyFaceLocal(BaseModel):
+    image: str
+
 class CompareImage(BaseModel):
     source_image:str
     target_image:str

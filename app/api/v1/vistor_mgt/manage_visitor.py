@@ -2,11 +2,19 @@ import base64
 import uuid
 from fastapi import  HTTPException,APIRouter, Depends, File, UploadFile
 from typing import Optional, Annotated
+
+from urllib3 import request
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 from app.core.constants.auth import ROLE_ADMIN
 from app.schemas.visitor import CreateNewVisitor,VisitorFilter,IdentifyVisitor
 from app.schemas.faceapi_mgt import CreateEnrollFace,GetEnrollFace,IdentifyFace
 
 from app.clients.face_api import FaceApiClient
+from app.services.attendance_local import AttendanceLocalService
 from app.services.auth import AuthService
 # from app.services.face_api import FaceApiService
 from app.services.visitor import VisitorService
@@ -16,6 +24,7 @@ client = FaceApiClient()
 router = APIRouter()
 auth_service = AuthService()
 visitor_service = VisitorService()
+attendance_local_service = AttendanceLocalService()
 
 
 @router.post('/register/visitor' ,description="Create new Visitor With Upload Picture")
@@ -114,19 +123,62 @@ def identify_face(
     request_body: IdentifyVisitor
     ):
     # auth_service.has_role(auth_user.id, ROLE_ADMIN)
-    result = visitor_service.identify_face_visitor(request_body)   
+    try:
+        # First try to create attendance
+        logger.info("Attempting to create attendance...")
+        new_attendance, visitor_info = attendance_local_service.create(request_body)
 
-    return {
-        'status':200,
-        'message':'Visitor is Valid',
-        'visitor':
-            {
-                'nik':result.nik,
-                'fullName': result.full_name,
-                "companyName": result.company,
-                'address':result.address,
+        logger.info("Successfully created attendance")
+        return {
+            'status': 200,
+            'message': 'Visitor is Valid by Local',
+            'visitor': {
+                'nik': visitor_info.get('nik', ''),
+                'fullName': visitor_info.get('full_name', ''),
+                'companyName': visitor_info.get('company', ''),
+                'address': visitor_info.get('address', ''),
             }
-    } 
+        }
+
+    except HTTPException as e:
+        logger.info(f"Initial attendance creation failed with status {e.status_code}")
+
+        if e.status_code in [404]:  # No matching face
+            # Fall back to identify_face_visitor
+            try:
+                logger.info("Attempting fallback to identify_face_visitor...")
+                visitor = visitor_service.identify_face_visitor(request_body)
+
+                logger.info("Successfully identified visitor through fallback method")
+                return {
+                    'status': 200,
+                    'message': 'Visitor is Valid',
+                    'visitor': {
+                        'nik': visitor.nik,
+                        'fullName': visitor.full_name,
+                        'companyName': visitor.company,
+                        'address': visitor.address,
+                    }
+                }
+
+            except Exception as identify_err:
+                logger.error(f"Fallback identification failed: {str(identify_err)}")
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Both identification methods failed: {str(identify_err)}"
+                )
+        else:
+            # Re-raise other HTTP exceptions
+            logger.error(f"Non-fallback HTTP error occurred: {str(e)}")
+            raise
+
+    except Exception as e:
+        # Handle any other unexpected errors
+        logger.error(f"Unexpected error in identify_face: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"An unexpected error occurred: {str(e)}"
+        )
 
 @router.delete('/visitors/{id}')
 def delete_visitor(

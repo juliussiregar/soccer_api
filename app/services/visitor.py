@@ -162,8 +162,6 @@ class VisitorService:
             logger.error(err_msg)
             raise InternalErrorException(err_msg)
 
-
-
         return visitor
 
     def delete_visitor(self,id:uuid)->Tuple[Visitor,Faces,Transaction,Attendance]:

@@ -164,3 +164,11 @@ class VisitorRepository :
             db.commit()
 
         return visitor
+
+    def get_all_visitors(self):
+        with get_session() as db:
+            visitor = (
+                db.query(Visitor).all()
+                )
+
+        return visitor

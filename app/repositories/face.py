@@ -10,6 +10,7 @@ from app.utils.etc import id_generator
 
 from app.utils.exception import UnprocessableException
 from app.models.face import Faces
+from app.models.visitor import Visitor
 
 
 class FaceRepository :
@@ -22,6 +23,23 @@ class FaceRepository :
                 )
 
         return face
+
+    def get_all_faces_with_visitors(self):
+        with get_session() as db:
+            results = (
+                db.query(
+                        Faces.id,
+                        Faces.visitor_id,
+                        Visitor.nik,
+                        Visitor.full_name,
+                        Faces.image_base64,
+                        Visitor.company,
+                        Visitor.address,
+                        Faces.created_at)
+                .join(Visitor, Faces.visitor_id == Visitor.id, isouter=True)  # LEFT JOIN
+                .all()
+            )
+        return results
     
     def get_visitorid_by_imagebase64(self,image:str)->Faces:
         with get_session() as db:
