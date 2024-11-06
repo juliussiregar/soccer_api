@@ -120,7 +120,7 @@ class AttendanceLocalService:
                 logger.info(f"Face distance for visitor {i + 1}: {distance}")
 
                 # Set a threshold to match the visitor's face
-                if distance < min_distance and distance < 0.65:
+                if distance < min_distance and distance < 0.5:
                     min_distance = distance
                     best_match = visitor_data
                     logger.info(f"New best match found with distance: {distance}")
@@ -152,12 +152,12 @@ class AttendanceLocalService:
             )
 
             # Check if visitor has already checked in
-            if existing_attendance:
-                logger.info(f"Visitor {full_name} has already checked in today")
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Visitor {full_name} has already checked in."
-                )
+            # if existing_attendance:
+            #     logger.info(f"Visitor {full_name} has already checked in today")
+            #     raise HTTPException(
+            #         status_code=400,
+            #         detail=f"Visitor {full_name} has already checked in."
+            #     )
 
             # Record attendance if a match is found
             try:
