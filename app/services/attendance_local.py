@@ -2,7 +2,6 @@ from typing import List, Tuple, Type, Optional, Dict, Any
 from fastapi import HTTPException
 from datetime import date, datetime
 import pytz
-import cv2
 import numpy as np
 import face_recognition
 import base64
@@ -24,7 +23,7 @@ from app.utils.logger import logger
 
 
 def process_base64_image(base64_string: str) -> np.ndarray:
-    """Convert base64 string to OpenCV image."""
+    """Convert base64 string to numpy array in RGB format."""
     try:
         # Remove potential data URI prefix
         if 'base64,' in base64_string:
@@ -32,7 +31,10 @@ def process_base64_image(base64_string: str) -> np.ndarray:
 
         img_data = base64.b64decode(base64_string)
         img = Image.open(BytesIO(img_data))
-        return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+        # Convert directly to RGB format
+        img = img.convert('RGB')
+        # Convert to numpy array
+        return np.array(img)
     except Exception as e:
         logger.error(f"Error processing base64 image: {str(e)}")
         raise HTTPException(status_code=400, detail=f"Invalid image format: {str(e)}")
@@ -43,15 +45,14 @@ def get_start_of_day(dt: datetime) -> datetime:
     return dt.replace(hour=0, minute=0, second=0, microsecond=0)
 
 
-def get_face_encoding(img: np.ndarray) -> np.ndarray:
-    """Generate face encoding from an image."""
-    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    face_locations = face_recognition.face_locations(img_rgb)
+def get_face_encoding(img_array: np.ndarray) -> np.ndarray:
+    """Generate face encoding from an RGB image array."""
+    face_locations = face_recognition.face_locations(img_array)
 
     if not face_locations:
         raise HTTPException(status_code=400, detail="No face detected in the image")
 
-    return face_recognition.face_encodings(img_rgb, face_locations)[0]
+    return face_recognition.face_encodings(img_array, face_locations)[0]
 
 
 def row_to_dict(row: Row) -> dict:
@@ -79,7 +80,7 @@ class AttendanceLocalService:
 
         logger.info("Starting face identification process")
 
-        # First process the input image
+        # Process the input image
         try:
             input_image = process_base64_image(payload.image)
             input_encoding = get_face_encoding(input_image)
@@ -101,25 +102,21 @@ class AttendanceLocalService:
 
         for i, visitor in enumerate(visitors):
             logger.info(f"Processing visitor {i + 1}/{len(visitors)}")
-            logger.info(f"Visitor data structure: {type(visitor)}")
 
-            # Convert Row to dict for easier access
             visitor_data = row_to_dict(visitor)
-            logger.info(f"Visitor data keys: {visitor_data.keys()}")
-
             face_image = visitor_data.get('face_image') or visitor_data.get('image_base64')
+
             if not face_image:
                 logger.warning(f"No face image found for visitor {visitor_data.get('visitor_id', 'unknown')}")
                 continue
 
             try:
-                visitor_img = process_base64_image(face_image)
-                visitor_encoding = get_face_encoding(visitor_img)
+                visitor_img_array = process_base64_image(face_image)
+                visitor_encoding = get_face_encoding(visitor_img_array)
 
                 distance = face_recognition.face_distance([visitor_encoding], input_encoding)[0]
                 logger.info(f"Face distance for visitor {i + 1}: {distance}")
 
-                # Set a threshold to match the visitor's face
                 if distance < min_distance and distance < 0.5:
                     min_distance = distance
                     best_match = visitor_data
@@ -130,9 +127,8 @@ class AttendanceLocalService:
 
         if best_match:
             logger.info(f"Best match found with distance: {min_distance}")
-            logger.info(f"Best match data: {best_match}")
 
-            visitor_id = best_match.get('visitor_id')  # Use visitor_id field
+            visitor_id = best_match.get('visitor_id')
             full_name = best_match.get('full_name', 'Unknown')
 
             if not visitor_id:
@@ -144,22 +140,12 @@ class AttendanceLocalService:
 
             today_start = get_start_of_day(datetime.now(pytz.timezone('Asia/Jakarta')))
 
-            # Call existing_attendance with correct parameters
             existing_attendance = self.attendance_local_repo.existing_attendance(
                 visitor_id=visitor_id,
                 full_name=full_name,
                 today_start=today_start
             )
 
-            # Check if visitor has already checked in
-            # if existing_attendance:
-            #     logger.info(f"Visitor {full_name} has already checked in today")
-            #     raise HTTPException(
-            #         status_code=400,
-            #         detail=f"Visitor {full_name} has already checked in."
-            #     )
-
-            # Record attendance if a match is found
             try:
                 check_in_time = datetime.now(pytz.timezone('Asia/Jakarta'))
                 new_attendance = CreateCheckIn(
@@ -169,7 +155,6 @@ class AttendanceLocalService:
                 )
                 self.attendance_local_repo.insert_attendance_checkin(new_attendance)
 
-                # Prepare visitor response
                 visitor_response = {
                     'id': visitor_id,
                     'full_name': full_name,
