@@ -24,6 +24,10 @@ RUN pip install --upgrade pip && \
 # Copy the project files to the container
 COPY . .
 
+ENV PIP_DEFAULT_TIMEOUT=100
+
+RUN pip install --no-cache-dir dlib==19.24.6
+
 # Compile Python source files into byte code and then delete the original source files
 RUN python -m compileall -b . && find * | grep '\.py$' | xargs rm
 
