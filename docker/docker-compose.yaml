@@ -17,7 +17,7 @@ services:
         TZ: Asia/Jakarta
         URL: aluesagd.com
         VALIDATION: http
-        SUBDOMAINS: api-vms,dashboard-vms	
+        SUBDOMAINS: api-docs-vms,dashboard-absen-vms
         ONLY_SUBDOMAINS: true
         restart: unless-stopped
 
@@ -50,7 +50,7 @@ services:
     depends_on:
       - app
     environment:
-      REACT_APP_API_URL: api-vms.aluesagd.com
+      REACT_APP_API_URL: api-docs-vms.aluesagd.com
       TZ: Asia/Jakarta
     restart: unless-stopped
     ports:
