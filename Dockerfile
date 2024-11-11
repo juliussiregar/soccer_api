@@ -21,9 +21,6 @@ RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r temp_requirements.txt && \
     rm temp_requirements.txt
 
-# Install dlib separately
-RUN pip install dlib
-
 # Copy the project files to the container
 COPY . .
 
