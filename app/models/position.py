@@ -15,4 +15,4 @@ class Position(Base):
     deleted_at = Column(DateTime, nullable=True)
 
     company = relationship("Company", back_populates="position")
-    daily_salary = relationship("Company", back_populates="position")
+    daily_salary = relationship("DailySalary", back_populates="position")
