@@ -57,7 +57,7 @@ services:
       - 8081:80
 
   app:
-    image: visitorappimage
+    image: employeeappimage
     depends_on:
       - postgres
       - pgbouncer
@@ -71,7 +71,7 @@ services:
     restart: unless-stopped
 
   migration:
-    image: visitorappimage
+    image: employeeappimage
     depends_on:
       - postgres
       - pgbouncer
