@@ -10,7 +10,7 @@ from app.utils.etc import id_generator
 
 from app.utils.exception import UnprocessableException
 from app.schemas.faceapi_mgt import CreateFaceGallery
-from app.models.client import Client
+from app.models.company import Client
 
 class ClientRepository :
     def insert(self, client_name:str) -> Client:

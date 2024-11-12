@@ -10,7 +10,7 @@ from app.utils.etc import id_generator
 
 from app.utils.exception import UnprocessableException
 from app.schemas.visitor import CreateNewVisitor
-from app.models.visitor import Visitor
+from app.models.employee import Visitor
 from app.models.transaction import Transaction
 from app.repositories.client import ClientRepository
 

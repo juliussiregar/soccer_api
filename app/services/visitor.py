@@ -13,8 +13,8 @@ from app.repositories.visitor import VisitorRepository
 from app.repositories.client import ClientRepository
 from app.repositories.face import FaceRepository
 from app.clients.face_api import FaceApiClient
-from app.models.client import Client
-from app.models.visitor import Visitor
+from app.models.company import Client
+from app.models.employee import Visitor
 from app.models.transaction import Transaction
 from app.models.face import Faces
 from app.core.constants.information import CLIENT_NAME

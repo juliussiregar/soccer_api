@@ -7,8 +7,8 @@ from app.schemas.visitor import CreateNewVisitor,Face,GetVisitor,IdentifyVisitor
 from app.schemas.faceapi_mgt import CreateEnrollFace,IdentifyFace
 from app.repositories.attendance import AttendanceRepository
 from app.schemas.attendance_mgt import CreateCheckIn,UpdateCheckOut
-from app.models.client import Client
-from app.models.visitor import Visitor
+from app.models.company import Client
+from app.models.employee import Visitor
 from app.models.attendance import Attendance
 from app.models.face import Faces
 from app.core.constants.information import CLIENT_NAME

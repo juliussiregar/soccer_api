@@ -3,7 +3,7 @@ from typing import List, Tuple
 from app.models.role import Role
 from app.models.user import User
 # from app.models.face import Faces
-from app.models.client import Client
+from app.models.company import Client
 from app.clients.face_api import FaceApiClient
 from app.schemas.faceapi_mgt import CreateFaceGallery
 

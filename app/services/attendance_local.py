@@ -17,7 +17,7 @@ from app.schemas.faceapi_mgt import IdentifyFaceLocal
 from app.services.visitor import VisitorService
 from app.schemas.visitor import IdentifyVisitor
 from app.schemas.attendance_local_mgt import CreateCheckIn
-from app.models.visitor import Visitor
+from app.models.employee import Visitor
 from app.utils.exception import InternalErrorException, UnprocessableException
 from app.utils.logger import logger
 
