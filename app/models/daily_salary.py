@@ -9,7 +9,7 @@ class DailySalary(Base):
     id = Column(Integer, primary_key=True, index=True)
     company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=False)
     employee_id = Column(UUID(as_uuid=True), ForeignKey("employees.id"), nullable=False)
-    position_id = Column(UUID(as_uuid=True), ForeignKey("positions.id"), nullable=False)
+    position_id = Column(Integer, ForeignKey("positions.id"), nullable=False)
     hours_rate = Column(Integer, nullable=True)
     hours_worked = Column(Integer, nullable=True)
     standard_hours = Column(Integer, nullable=True)
