@@ -13,7 +13,7 @@ class PositionFilter(BaseModel):
 
 # Schema dasar untuk data Position
 class CreateNewPosition(BaseModel):
-    company_id: str                 # ID Perusahaan yang terkait
+    company_id: Optional[str] = None  # Membuat company_id opsional
     name: str                        # Nama Posisi
     description: Optional[str] = None # Deskripsi Posisi
 

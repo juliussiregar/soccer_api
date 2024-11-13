@@ -36,7 +36,7 @@ class JwtMiddleware:
                 updated_at=payload.get("updated_at"),
                 deleted_at=payload.get("deleted_at"),
                 created_by=payload.get("created_by"),
-                roles=payload.get("roles", [])  # Ambil peran dari payload atau default sebagai list kosong
+                roles=payload.get("roles", [])  
             )
             return auth_user
         except ExpiredSignatureError:

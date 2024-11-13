@@ -6,6 +6,8 @@ from app.core.constants.auth import JWT_TOKEN_EXPIRE_IN_MIN
 from app.core.config import settings
 from app.schemas.user_mgt import AuthUser
 import logging
+from sqlalchemy.orm import joinedload
+
 
 class AuthService:
     def __init__(self) -> None:
@@ -29,7 +31,9 @@ class AuthService:
 
     def get_user_details(self, user_id: int) -> AuthUser:
         try:
+            # Panggil find_by_id tanpa .options(joinedload(User.roles))
             user = self.auth_repo.find_by_id(user_id)
+
             if user is None:
                 raise UnauthorizedException("User not found")
 
@@ -42,7 +46,8 @@ class AuthService:
                 created_at=user.created_at,
                 updated_at=user.updated_at,
                 deleted_at=user.deleted_at,
-                created_by=user.created_by
+                created_by=user.created_by,
+                roles=[role.name for role in user.roles]  # Dapatkan nama roles
             )
             logging.info(f"User details: {user_data}")
             return user_data
