@@ -8,7 +8,6 @@ from app.models.user import User
 from app.repositories.role import RoleRepository
 from app.utils.date import get_now
 from app.models.role import Role, user_role_association
-from app.utils.etc import id_generator
 
 from app.schemas.user_mgt import UserCreate, UserUpdate, UserFilter, RegisterUpdate,PasswordUpdate
 

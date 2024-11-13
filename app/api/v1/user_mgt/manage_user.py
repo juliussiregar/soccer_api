@@ -1,7 +1,9 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from typing import Optional, Annotated
 
-from app.schemas.user_mgt import UserFilter, UserCreate, UserUpdate,PasswordUpdate, RegisterUpdate
+from app.schemas.user_mgt import UserCreate, UserUpdate, RegisterUpdate
+from app.schemas.position import PositionFilter
+
 from app.middleware.jwt import jwt_middleware, AuthUser
 from app.core.constants.auth import ROLE_ADMIN
 
@@ -20,10 +22,13 @@ def user_list(
     page: int = 1,
     q: Optional[str] = None,
 ):
-    auth_service.has_role(auth_user.id, ROLE_ADMIN)
+    # Cek apakah role pengguna adalah ADMIN atau HR
+    if auth_user.roles and ROLE_ADMIN in auth_user.roles:
+        _filter = PositionFilter(limit=limit, page=page, search=q)
+    else:
+        raise HTTPException(status_code=403, detail="Access denied for this role")
 
-    filter = UserFilter(limit=limit, page=page, search=q)
-    users, total_rows, total_pages = user_service.list(filter)
+    users, total_rows, total_pages = user_service.list(_filter)
 
     return {
         "data": [
@@ -52,7 +57,12 @@ def user_create(
     auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
         body: UserCreate
 ):
-    auth_service.has_role(auth_user.id, ROLE_ADMIN)
+    # Check if the user has the 'ADMIN' role
+    if not auth_user.roles or ROLE_ADMIN not in auth_user.roles:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied: Only ADMIN role can create a new user."
+        )
 
     user = user_service.create(body)
 
@@ -74,7 +84,12 @@ def user_update(
         id: int,
         body: UserUpdate
 ):
-    auth_service.has_role(auth_user.id, ROLE_ADMIN)
+    # Check if the user has the 'ADMIN' role
+    if not auth_user.roles or ROLE_ADMIN not in auth_user.roles:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied: Only ADMIN role can update user."
+        )
 
     user = user_service.update(id, body)
 
@@ -95,24 +110,35 @@ def user_delete(
     auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
     id: int
 ):
-    auth_service.has_role(auth_user.id, ROLE_ADMIN)
+    # Check if the user has the 'ADMIN' role
+    if not auth_user.roles or ROLE_ADMIN not in auth_user.roles:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied: Only ADMIN role can delete user"
+        )
+
     user_service.delete(id)
     return {"message": "User deleted successfully"}
 
-@router.put("/user/update_user_password")
-def user_update(
-    auth_user: Annotated[AuthUser, Depends(jwt_middleware)], body: PasswordUpdate
-):
-    auth_service.user_exists(auth_user.id)
-    user = user_service.update_user_password(auth_user.id,body)
-    return {"message": "Password updated successfully"}
+# @router.put("/user/update_user_password")
+# def user_update(
+#     auth_user: Annotated[AuthUser, Depends(jwt_middleware)], body: PasswordUpdate
+# ):
+#     auth_service.user_exists(auth_user.id)
+#     user = user_service.update_user_password(auth_user.id,body)
+#     return {"message": "Password updated successfully"}
 
 @router.put("/change_password/{id}")
 def user_update(
     auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
     id: int, body: RegisterUpdate
 ):
-    auth_service.has_role(auth_user.id, ROLE_ADMIN)
+    # Check if the user has the 'ADMIN' role
+    if not auth_user.roles or ROLE_ADMIN not in auth_user.roles:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied: Only ADMIN role can change password"
+        )
 
     user = user_service.update_password(id, body)
 
