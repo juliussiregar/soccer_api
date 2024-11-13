@@ -11,6 +11,8 @@ from datetime import datetime, timezone
 
 
 
+from app.utils.date import get_now
+
 
 # Repository untuk manajemen CRUD Position
 class PositionRepository:
