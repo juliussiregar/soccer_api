@@ -32,4 +32,4 @@ class PositionData(BaseModel):
     updated_at: Optional[datetime]   # Tanggal pembaruan terakhir
 
     class Config:
-        orm_mode = True  # Konfigurasi untuk ORM mode agar dapat bekerja dengan SQLAlchemy
+        from_attributes = True  # Konfigurasi untuk ORM mode agar dapat bekerja dengan SQLAlchemy
