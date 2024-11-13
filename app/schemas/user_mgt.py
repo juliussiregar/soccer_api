@@ -1,3 +1,4 @@
+from uuid import UUID
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
@@ -10,6 +11,7 @@ class UserFilter(BaseModel):
 
 
 class UserCreate(BaseModel):
+    company_id: UUID
     full_name: str
     username: str
     password: str
@@ -18,10 +20,12 @@ class UserCreate(BaseModel):
 
 
 class UserUpdate(BaseModel):
+    company_id: UUID
     full_name: str
     username: str
     password: Optional[str] = None
     email: Optional[str] = None
+    role: Optional[str] = None
 
 
 class UserAddRole(BaseModel):
@@ -34,7 +38,6 @@ class UserRemoveRole(BaseModel):
 
 class RegisterUpdate(BaseModel):
     password: str
-
 
 class PasswordUpdate(BaseModel):
     new_password: str

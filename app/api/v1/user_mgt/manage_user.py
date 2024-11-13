@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from typing import Optional, Annotated
 
-from app.schemas.user_mgt import UserFilter, UserCreate, UserUpdate,PasswordUpdate
+from app.schemas.user_mgt import UserFilter, UserCreate, UserUpdate,PasswordUpdate, RegisterUpdate
 from app.middleware.jwt import jwt_middleware, AuthUser
 from app.core.constants.auth import ROLE_ADMIN
 
@@ -29,6 +29,7 @@ def user_list(
         "data": [
             {
                 "id": user.id,
+                "company_id": user.company_id,
                 "full_name": user.full_name,
                 "username": user.username,
                 "roles": [role.name for role in user.roles],
@@ -48,7 +49,8 @@ def user_list(
 
 @router.post("/user")
 def user_create(
-    auth_user: Annotated[AuthUser, Depends(jwt_middleware)], body: UserCreate
+    auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
+        body: UserCreate
 ):
     auth_service.has_role(auth_user.id, ROLE_ADMIN)
 
@@ -57,6 +59,7 @@ def user_create(
     return {
         "data": {
             "id": user.id,
+            "company_id": user.company_id,
             "full_name": user.full_name,
             "username": user.username,
             "roles": [body.role],
@@ -64,6 +67,37 @@ def user_create(
             "updated_at": user.updated_at,
         },
     }
+
+@router.put("/user/{id}")
+def user_update(
+    auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
+        id: int,
+        body: UserUpdate
+):
+    auth_service.has_role(auth_user.id, ROLE_ADMIN)
+
+    user = user_service.update(id, body)
+
+    return {
+        "data": {
+            "id": user.id,
+            "company_id": user.company_id,
+            "full_name": user.full_name,
+            "username": user.username,
+            "roles": [body.role],
+            "created_at": user.created_at,
+            "updated_at": user.updated_at,
+        },
+    }
+
+@router.delete("/user/{id}")
+def user_delete(
+    auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
+    id: int
+):
+    auth_service.has_role(auth_user.id, ROLE_ADMIN)
+    user_service.delete(id)
+    return {"message": "User deleted successfully"}
 
 @router.put("/user/update_user_password")
 def user_update(
@@ -73,22 +107,21 @@ def user_update(
     user = user_service.update_user_password(auth_user.id,body)
     return {"message": "Password updated successfully"}
 
-# @router.put("/user/{id}")
-# def user_update(
-#     auth_user: Annotated[AuthUser, Depends(jwt_middleware)], id: int, body: UserUpdate
-# ):
-#     auth_service.has_role(auth_user.id, ROLE_ADMIN)
+@router.put("/change_password/{id}")
+def user_update(
+    auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
+    id: int, body: RegisterUpdate
+):
+    auth_service.has_role(auth_user.id, ROLE_ADMIN)
 
-#     user = user_service.update(id, body)
+    user = user_service.update_password(id, body)
 
-#     return {
-#         "data": {
-#             "id": user.id,
-#             "full_name": user.full_name,
-#             "username": user.username,
-#             "referral_code": user.referral_code,
-#             "profit_share": user.profit_share,
-#             "created_at": user.created_at,
-#             "updated_at": user.updated_at,
-#         },
-#     }
+    return {
+        "data": {
+            "id": user.id,
+            "full_name": user.full_name,
+            "username": user.username,
+            "created_at": user.created_at,
+            "updated_at": user.updated_at,
+        },
+    }
