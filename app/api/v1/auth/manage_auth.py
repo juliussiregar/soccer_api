@@ -1,21 +1,18 @@
-
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
-from typing import Annotated
-from app.middleware.jwt import jwt_middleware, oauth2_bearer, revoked_tokens  # Import oauth2_bearer and revoked_tokens
+from fastapi import APIRouter, Depends, HTTPException, Form
+from app.middleware.jwt import jwt_middleware, oauth2_bearer, revoked_tokens
 from app.services.auth import AuthService
 from app.schemas.user_mgt import AuthUser
+from typing import Annotated
 
 router = APIRouter()
 auth_service = AuthService()
 
-class LoginRequest(BaseModel):
-    identifier: str  # Username or email
-    password: str
-
 @router.post("/auth/login")
-def auth_get_access_token(login_data: LoginRequest):
-    access_token = auth_service.generate_token(login_data.identifier, login_data.password)
+def auth_get_access_token(
+    username: str = Form(...),  # Menggunakan 'username' agar sesuai dengan standar OAuth2
+    password: str = Form(...)
+):
+    access_token = auth_service.generate_token(username, password)
     if not access_token:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
@@ -28,12 +25,8 @@ def auth_get_me(auth_user: Annotated[AuthUser, Depends(jwt_middleware)]):
 
 @router.post("/auth/logout")
 def logout(auth_user: Annotated[AuthUser, Depends(jwt_middleware)], token: str = Depends(oauth2_bearer)):
-    """
-    Endpoint untuk logout. Token akan dicabut dengan menambahkannya ke revoked_tokens.
-    """
     if not auth_user:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
     revoked_tokens.add(token)
-
     return {"message": "Logout successful. Token has been revoked."}
