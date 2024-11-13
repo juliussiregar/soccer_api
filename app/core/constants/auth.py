@@ -1,8 +1,8 @@
-# Expire in 1 month
+#core/constants/auth.py
 JWT_TOKEN_EXPIRE_IN_MIN = 43200
 
-USER_ADMIN = "admin"
-PASS_ADMIN = "SiPalingSakti"
+USER_ADMIN = "admins"
+PASS_ADMIN = "admin123"
 
-ROLE_ADMIN = "admin"
-ROL_VISITOR = "visitor"
+ROLE_ADMIN = "ADMIN"
+ROLE_HR = "HR"
