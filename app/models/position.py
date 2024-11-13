@@ -1,5 +1,4 @@
 from .base import Base
-
 from sqlalchemy import UUID, Column, ForeignKey, DateTime, func, String, Integer
 from sqlalchemy.orm import relationship
 from app.core.constants.app import DEFAULT_TZ
@@ -14,5 +13,7 @@ class Position(Base):
     updated_at = Column(DateTime, nullable=True)
     deleted_at = Column(DateTime, nullable=True)
 
+    # Relationships
     company = relationship("Company", back_populates="position")
+    employees = relationship("Employee", back_populates="position")  # Relationship ke Employee
     daily_salary = relationship("DailySalary", back_populates="position")
