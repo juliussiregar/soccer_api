@@ -7,6 +7,9 @@ from app.core.database import get_session
 from app.models.position import Position
 from app.schemas.position import CreateNewPosition, UpdatePosition, PositionFilter
 from sqlalchemy.orm import joinedload
+from datetime import datetime, timezone
+
+
 
 
 # Repository untuk manajemen CRUD Position
@@ -96,19 +99,20 @@ class PositionRepository:
         return position
 
     # Memperbarui data Position berdasarkan ID
-    def update(self, position_id: int, payload: UpdatePosition) -> Optional[Position]:
+    def update(self, position_id: int, payload: UpdatePosition, company_id: str) -> Optional[Position]:
         """
-        Memperbarui data Position berdasarkan ID posisi.
+        Memperbarui data Position berdasarkan ID posisi dan ID perusahaan.
 
         Args:
             position_id (int): ID posisi yang akan diperbarui.
             payload (UpdatePosition): Data baru untuk posisi.
+            company_id (str): ID perusahaan untuk memastikan posisi berada dalam perusahaan yang benar.
 
         Returns:
             Optional[Position]: Objek Position setelah diperbarui atau None jika tidak ditemukan.
         """
         with get_session() as db:
-            position = db.query(Position).filter(Position.id == position_id).first()
+            position = db.query(Position).filter(Position.id == position_id, Position.company_id == company_id).first()
 
             if not position:
                 return None
@@ -118,25 +122,26 @@ class PositionRepository:
             if payload.description is not None:
                 position.description = payload.description
 
-            position.updated_at = get_now()
+            position.updated_at = datetime.now(timezone.utc)
             db.commit()
             db.refresh(position)
 
         return position
 
     # Menghapus data Position berdasarkan ID
-    def delete_position_by_id(self, position_id: int) -> Optional[Position]:
+    def delete_position_by_id(self, position_id: int, company_id: str) -> Optional[Position]:
         """
-        Menghapus data Position berdasarkan ID posisi.
+        Menghapus data Position berdasarkan ID posisi dan ID perusahaan.
 
         Args:
             position_id (int): ID posisi yang akan dihapus.
+            company_id (str): ID perusahaan untuk memastikan posisi berada dalam perusahaan yang benar.
 
         Returns:
             Optional[Position]: Objek Position yang dihapus atau None jika tidak ditemukan.
         """
         with get_session() as db:
-            position = db.query(Position).filter(Position.id == position_id).first()
+            position = db.query(Position).filter(Position.id == position_id, Position.company_id == company_id).first()
             if position:
                 db.delete(position)
                 db.commit()

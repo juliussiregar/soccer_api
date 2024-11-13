@@ -68,34 +68,36 @@ class PositionService:
 
 
     # Memperbarui posisi berdasarkan ID
-    def update_position(self, position_id: int, payload: UpdatePosition) -> PositionData:
+    def update_position(self, position_id: int, payload: UpdatePosition, company_id: str) -> PositionData:
         """
-        Memperbarui data Position berdasarkan ID posisi.
+        Memperbarui data Position berdasarkan ID posisi dan company_id.
 
         Args:
             position_id (int): ID posisi yang akan diperbarui.
             payload (UpdatePosition): Data baru untuk posisi.
+            company_id (str): ID perusahaan terkait.
 
         Returns:
             PositionData: Data posisi setelah diperbarui.
         """
-        position = self.position_repo.update(position_id, payload)
+        position = self.position_repo.update(position_id, payload, company_id)
         if position is None:
             raise UnprocessableException("Position not found or could not be updated")
         return position
 
     # Menghapus posisi berdasarkan ID
-    def delete_position(self, position_id: int) -> PositionData:
+    def delete_position(self, position_id: int, company_id: str) -> PositionData:
         """
-        Menghapus data Position berdasarkan ID posisi.
+        Menghapus data Position berdasarkan ID posisi dan ID perusahaan.
 
         Args:
             position_id (int): ID posisi yang akan dihapus.
+            company_id (str): ID perusahaan untuk memastikan posisi berada dalam perusahaan yang benar.
 
         Returns:
             PositionData: Data posisi yang dihapus.
         """
-        position = self.position_repo.delete_position_by_id(position_id)
+        position = self.position_repo.delete_position_by_id(position_id, company_id)
         if position is None:
             raise UnprocessableException("Position not found")
         return position

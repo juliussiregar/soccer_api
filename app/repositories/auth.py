@@ -12,18 +12,12 @@ bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 class AuthRepository:
     def find_by_id(self, id: int) -> User | None:
-        """Menemukan pengguna berdasarkan ID unik mereka.
-        
-        Args:
-            id (int): ID dari pengguna yang dicari.
-        
-        Returns:
-            User | None: Mengembalikan objek User jika ditemukan, sebaliknya None.
-        """
+        """Menemukan pengguna berdasarkan ID unik mereka, dengan eager loading pada `roles`."""
         with get_session() as db:
             return (
                 db.query(User)
                 .filter(User.id == id, User.deleted_at.is_(None))
+                .options(joinedload(User.roles))  # Eager load roles di sini
                 .one_or_none()
             )
 
