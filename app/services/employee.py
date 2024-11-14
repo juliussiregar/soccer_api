@@ -40,3 +40,9 @@ class EmployeeService:
         if employee is None:
             raise UnprocessableException("Employee not found")
         return employee
+    
+    def get_employees_by_company_id(self, company_id: uuid.UUID) -> List[EmployeeData]:
+        employees = self.employee_repo.get_employees_by_company_id(company_id)
+        if not employees:
+            raise UnprocessableException("No employees found for this company")
+        return [EmployeeData.from_orm(emp) for emp in employees]

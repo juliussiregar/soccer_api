@@ -1,8 +1,10 @@
 # schemas/employee.py
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, validator
 from typing import Optional
 from datetime import datetime
+from uuid import UUID
+
 
 class EmployeeFilter(BaseModel):
     limit: Optional[int] = None
@@ -32,5 +34,11 @@ class EmployeeData(BaseModel):
     created_at: datetime
     updated_at: Optional[datetime]
 
+    # Validator to convert UUID fields to string
+    @validator('id', 'company_id', pre=True, always=True)
+    def convert_uuid_to_str(cls, v):
+        return str(v) if isinstance(v, UUID) else v
+
     class Config:
         orm_mode = True
+        from_attributes = True
