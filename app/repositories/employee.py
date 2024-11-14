@@ -78,3 +78,8 @@ class EmployeeRepository:
                 db.delete(employee)
                 db.commit()
             return employee
+        
+    def get_employees_by_company_id(self, company_id: uuid.UUID) -> List[Employee]:
+        with get_session() as db:
+            employees = db.query(Employee).filter(Employee.company_id == company_id).all()
+        return employees
