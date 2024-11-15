@@ -1,45 +1,40 @@
-from datetime import datetime,date
-from typing import List, Optional, Tuple
+from datetime import datetime, date
+from typing import List, Optional
 import uuid
-from passlib.context import CryptContext
-from sqlalchemy.orm import Query, joinedload
-from sqlalchemy import extract, insert
+from sqlalchemy.orm import joinedload
+from sqlalchemy import extract
 
 from app.core.database import get_session
-from app.schemas.visitor import VisitorFilter
-from app.utils.date import get_now
-from app.utils.etc import id_generator
 from app.models.attendance import Attendance
-from app.schemas.attendance_mgt import AttendanceFilter, CreateCheckIn,UpdateCheckOut
+from app.schemas.attendance_mgt import CreateCheckIn, UpdateCheckOut
+from app.utils.date import get_now
 
-from app.utils.exception import UnprocessableException
-
-
-
-class AttendanceRepository :
-
+class AttendanceRepository:
 
     def get_all_filtered(self, filter_date: date) -> List[Attendance]:
         with get_session() as db:
             return (
                 db.query(Attendance)
-                .options(joinedload(Attendance.visitor))
+                .options(joinedload(Attendance.employee), joinedload(Attendance.company))
                 .filter(
-                        extract('month', Attendance.created_at) == filter_date.month,
-                        extract('year', Attendance.created_at) == filter_date.year,
-                        extract('day', Attendance.created_at) == filter_date.day
-                        )
+                    extract('month', Attendance.created_at) == filter_date.month,
+                    extract('year', Attendance.created_at) == filter_date.year,
+                    extract('day', Attendance.created_at) == filter_date.day
+                )
                 .order_by(Attendance.created_at.desc())
                 .all()
             )
 
-
-    def insert_attendance_checkin(self,payload:CreateCheckIn)->Attendance:
-        attendance = Attendance()
-        attendance.client_id = payload.client_id
-        attendance.visitor_id = payload.visitor_id
-        attendance.Check_in = payload.check_in
-        attendance.created_at = get_now()
+    def insert_attendance_checkin(self, payload: CreateCheckIn) -> Attendance:
+        attendance = Attendance(
+            company_id=payload.company_id,
+            employee_id=payload.employee_id,
+            check_in=payload.check_in,
+            photo_in=payload.photo_in,
+            location=payload.location,
+            type=payload.type if payload.type else "WFO",  # Default ke WFO jika tidak ada
+            created_at=get_now()
+        )
 
         with get_session() as db:
             db.add(attendance)
@@ -49,54 +44,35 @@ class AttendanceRepository :
 
         return attendance
 
-    def update_attendance_checkout(self,payload:UpdateCheckOut)->Attendance:
+    def update_attendance_checkout(self, payload: UpdateCheckOut, late_minutes: int, overtime_minutes: int, description: str) -> Optional[Attendance]:
         with get_session() as db:
-            ci_status = (
+            attendance = (
                 db.query(Attendance)
-                .filter(Attendance.visitor_id == payload.visitor_id,
-                Attendance.Check_out == None  # Belum check-out
-            )
-            .first()
+                .filter(Attendance.employee_id == payload.employee_id, Attendance.check_out == None)
+                .first()
             )
 
-            if ci_status:
-                ci_status.Check_out = payload.check_out
-                ci_status.updated_at = get_now()
+            if attendance:
+                attendance.check_out = payload.check_out
+                attendance.photo_out = payload.photo_out
+                attendance.location = payload.location  # Lokasi check-out
+                attendance.late = late_minutes
+                attendance.overtime = overtime_minutes
+                attendance.description = description
+                attendance.updated_at = get_now()
                 db.commit()
-                db.refresh(ci_status)
+                db.refresh(attendance)
 
-        return ci_status
+        return attendance
 
-    def existing_attendance(self,visitor_id:uuid,today_start:datetime)->Attendance:
+    def existing_attendance(self, employee_id: uuid.UUID, today_start: datetime) -> Optional[Attendance]:
         with get_session() as db:
-            ci_status = (
+            return (
                 db.query(Attendance)
-                .filter(Attendance.visitor_id == visitor_id,
-                Attendance.Check_in >= today_start,
-                Attendance.Check_out == None  # Belum check-out
+                .filter(
+                    Attendance.employee_id == employee_id,
+                    Attendance.check_in >= today_start,
+                    Attendance.check_out == None
+                )
+                .first()
             )
-            .first()
-            )
-
-        return ci_status
-    
-    def existing_attendance_id(self,visitor_id:uuid)->Attendance:
-        with get_session() as db:
-            ci_status = (
-                db.query(Attendance)
-                .filter(Attendance.visitor_id == visitor_id,
-                        Attendance.Check_out == None
-            )
-            .first()
-            )
-
-        return ci_status
-    
-    def delete_attendance_byuser_id(self,visitor_id=uuid)->Attendance:
-        with get_session() as db:
-            ci_status = db.query(Attendance).filter(Attendance.visitor_id == visitor_id).delete()
-            db.commit()
-
-        return ci_status
-
-    
