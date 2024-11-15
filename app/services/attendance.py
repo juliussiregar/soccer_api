@@ -1,7 +1,7 @@
 import base64
 from io import BytesIO
 from math import ceil
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from datetime import date, datetime, time, timedelta
 
 import face_recognition
@@ -22,7 +22,8 @@ from app.models.face import Face
 from app.repositories.company import CompanyRepository
 from app.repositories.employee import EmployeeRepository
 from app.repositories.face import FaceRepository
-from app.schemas.attendance_mgt import CreateCheckIn, UpdateCheckOut, IdentifyEmployee
+from app.schemas.attendance_mgt import CreateCheckIn, UpdateCheckOut, IdentifyEmployee, CreateAttendance, \
+    UpdateAttendance
 from app.repositories.attendance import AttendanceRepository
 from app.schemas.faceapi_mgt import IdentifyFace
 from app.services.employee import EmployeeService
@@ -83,27 +84,58 @@ class AttendanceService:
         """Helper function to get start of the current day in Asia/Jakarta timezone."""
         return dt.astimezone(jakarta_timezone).replace(hour=0, minute=0, second=0, microsecond=0)
 
-    def list_attendances_by_date(self, filter_date: date, limit: int, page: int) -> Tuple[List[Attendance], int, int]:
-        total_records = self.attendance_repo.count_attendances_by_date(filter_date)
-        total_pages = ceil(total_records / limit)
+    def create_attendance(self, payload: CreateAttendance):
+        try:
+            return self.attendance_repo.insert_attendance(payload)
+        except Exception as err:
+            logger.error(str(err))
+            raise InternalErrorException("Failed to create attendance.")
 
-        attendances = self.attendance_repo.get_all_by_date(filter_date, limit, (page - 1) * limit)
+    def update_attendance(self, attendance_id: int, payload: UpdateAttendance):
+        try:
+            return self.attendance_repo.update_attendance(attendance_id, payload)
+        except Exception as err:
+            logger.error(str(err))
+            raise InternalErrorException("Failed to update attendance.")
+
+    def delete_attendance(self, attendance_id: int):
+        try:
+            return self.attendance_repo.delete_attendance(attendance_id)
+        except Exception as err:
+            logger.error(str(err))
+            raise InternalErrorException("Failed to delete attendance.")
+
+    def list_attendances(
+            self, company_id: Optional[uuid.UUID], limit: int, page: int
+    ) -> Tuple[List[dict], int, int]:
+        try:
+            return self.attendance_repo.get_all_attendances(company_id, limit, page)
+        except Exception as err:
+            logger.error(str(err))
+            raise InternalErrorException("Failed to list attendances.")
+
+    def list_attendances_by_date(self, filter_date: date, company_id: Optional[uuid.UUID]):
+        """Retrieve attendances filtered by date and optional company_id."""
+        attendances, total_records, total_pages = self.attendance_repo.get_attendances_by_date(
+            filter_date, company_id
+        )
         return attendances, total_records, total_pages
 
-    def list_attendances_by_company(self, company_id: uuid.UUID, limit: int, page: int) -> Tuple[
+    def list_attendances_by_month(
+        self, year: int, month: int, company_id: Optional[uuid.UUID], limit: int, page: int
+    ):
+        """Retrieve attendances filtered by month, year, and optional company_id."""
+        attendances, total_records, total_pages = self.attendance_repo.get_attendances_by_month(
+            year, month, company_id, limit, page
+        )
+        return attendances, total_records, total_pages
+
+    def list_attendances_by_company(self, company_id: Optional[uuid.UUID], limit: int, page: int) -> Tuple[
         List[Attendance], int, int]:
         total_records = self.attendance_repo.count_attendances_by_company(company_id)
         total_pages = ceil(total_records / limit)
 
         attendances = self.attendance_repo.get_all_by_company(company_id, limit, (page - 1) * limit)
-        return attendances, total_records, total_pages
-
-    def list_attendances_by_month(self, month: int, year: int, limit: int, page: int) -> Tuple[
-        List[Attendance], int, int]:
-        total_records = self.attendance_repo.count_attendances_by_month(month, year)
-        total_pages = ceil(total_records / limit)
-
-        attendances = self.attendance_repo.get_all_by_month(month, year, limit, (page - 1) * limit)
         return attendances, total_records, total_pages
 
     def create_check_in(self, payload: CreateCheckIn) -> Attendance:

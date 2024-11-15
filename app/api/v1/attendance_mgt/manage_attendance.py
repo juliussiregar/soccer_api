@@ -1,12 +1,12 @@
 import uuid
-from datetime import date
-from typing import Annotated
+from datetime import date, datetime
+from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.params import Query
 
 from app.core.constants.auth import ROLE_ADMIN, ROLE_HR
-from app.schemas.attendance_mgt import IdentifyEmployee
+from app.schemas.attendance_mgt import IdentifyEmployee, UpdateAttendance, CreateAttendance
 from app.services.attendance import AttendanceService
 from app.middleware.jwt import jwt_middleware, AuthUser
 from app.utils.logger import logger
@@ -14,43 +14,81 @@ from app.utils.logger import logger
 router = APIRouter()
 attendance_service = AttendanceService()
 
-@router.get('/attendance/by-company', description="Get attendance by company ID")
-def get_attendance_by_company(
-    auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
-    company_id: uuid.UUID,
-    limit: int = 10,
-    page: int = 1,
-):
-    # Check if the user has the required roles
-    if not auth_user.roles or (ROLE_ADMIN not in auth_user.roles and ROLE_HR not in auth_user.roles):
-        raise HTTPException(status_code=403, detail="Access denied: Only ADMIN and HR roles can access attendance records.")
 
-    # Fetch attendance data for the specified company
-    attendances, total_records, total_pages = attendance_service.list_attendances_by_company(company_id, limit, page)
+@router.post('/attendances', description="Create a new attendance entry")
+def create_attendance(
+        payload: CreateAttendance,
+        auth_user: Annotated[AuthUser, Depends(jwt_middleware)]
+):
+    if not auth_user.roles or (ROLE_ADMIN not in auth_user.roles and ROLE_HR not in auth_user.roles):
+        raise HTTPException(status_code=403, detail="Access denied: Only ADMIN and HR roles can create attendance.")
+
+    attendance = attendance_service.create_attendance(payload)
+    return {
+        "success": True,
+        "data": attendance,
+        "message": "Attendance created successfully",
+        "code": 201
+    }
+
+
+@router.put('/attendances/{attendance_id}', description="Update an attendance entry")
+def update_attendance(
+        attendance_id: int,
+        payload: UpdateAttendance,
+        auth_user: Annotated[AuthUser, Depends(jwt_middleware)]
+):
+    if not auth_user.roles or (ROLE_ADMIN not in auth_user.roles and ROLE_HR not in auth_user.roles):
+        raise HTTPException(status_code=403, detail="Access denied: Only ADMIN and HR roles can update attendance.")
+
+    attendance = attendance_service.update_attendance(attendance_id, payload)
+    if not attendance:
+        raise HTTPException(status_code=404, detail="Attendance not found")
 
     return {
-        'success': True,
-        "data": [
-            {
-                "id": att.id,
-                "employee_id": att.employee_id,
-                "company_id": att.company_id,
-                "check_in": att.check_in,
-                "check_out": att.check_out,
-                "photo_in": att.photo_in,
-                "photo_out": att.photo_out,
-                "location": att.location,
-                "type": att.type,
-                "late": att.late,
-                "overtime": att.overtime,
-                "description": att.description,
-                "total_time": str(att.check_out - att.check_in) if att.check_out else None,
-                "created_at": att.created_at,
-            }
-            for att in attendances
-        ],
-        'message': "Attendance list by company",
-        'code': 200,
+        "success": True,
+        "data": attendance,
+        "message": "Attendance updated successfully",
+        "code": 200
+    }
+
+
+@router.delete('/attendances/{attendance_id}', description="Delete an attendance entry")
+def delete_attendance(
+        attendance_id: int,
+        auth_user: Annotated[AuthUser, Depends(jwt_middleware)]
+):
+    if not auth_user.roles or (ROLE_ADMIN not in auth_user.roles and ROLE_HR not in auth_user.roles):
+        raise HTTPException(status_code=403, detail="Access denied: Only ADMIN and HR roles can delete attendance.")
+
+    attendance = attendance_service.delete_attendance(attendance_id)
+    if not attendance:
+        raise HTTPException(status_code=404, detail="Attendance not found")
+
+    return {
+        "success": True,
+        "data": None,
+        "message": "Attendance deleted successfully",
+        "code": 200
+    }
+
+
+@router.get('/attendances', description="List all attendances with optional filtering by company_id")
+def list_attendances(
+        auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
+        company_id: Optional[uuid.UUID] = None,
+        limit: int = Query(default=10, description="Number of records per page"),
+        page: int = Query(default=1, description="Page number"),
+):
+    if not auth_user.roles or (ROLE_ADMIN not in auth_user.roles and ROLE_HR not in auth_user.roles):
+        raise HTTPException(status_code=403, detail="Access denied: Only ADMIN or HR roles can view attendances.")
+
+    attendances, total_records, total_pages = attendance_service.list_attendances(company_id, limit, page)
+    return {
+        "success": True,
+        "data": attendances,
+        "message": "Attendances retrieved successfully",
+        "code": 200,
         "meta": {
             "limit": limit,
             "page": page,
@@ -60,25 +98,27 @@ def get_attendance_by_company(
     }
 
 
-@router.get('/attendance/by-date', description="Get attendance by date with pagination")
+@router.get('/attendances/by-date', description="Get attendances filtered by date and optional company_id")
 def get_attendance_by_date(
     auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
     filter_date: date = Query(
         default=date.today(),
-        description="Filter date in YYYY-MM-DD format"
+        description="Filter attendances by specific date in YYYY-MM-DD format"
     ),
-    limit: int = 10,
-    page: int = 1,
+    company_id: Optional[uuid.UUID] = Query(
+        default=None,
+        description="Filter attendances by company_id (optional)"
+    ),
 ):
-    # Check if the user has the required roles
     if not auth_user.roles or (ROLE_ADMIN not in auth_user.roles and ROLE_HR not in auth_user.roles):
-        raise HTTPException(status_code=403, detail="Access denied: Only ADMIN and HR roles can access attendance records.")
+        raise HTTPException(status_code=403, detail="Access denied: Only ADMIN and HR roles can access this data.")
 
-    # Fetch attendance data for the specified date with pagination
-    attendances, total_records, total_pages = attendance_service.list_attendances_by_date(filter_date, limit, page)
+    attendances, total_records, total_pages = attendance_service.list_attendances_by_date(
+        filter_date=filter_date, company_id=company_id
+    )
 
     return {
-        'success': True,
+        "success": True,
         "data": [
             {
                 "id": att.id,
@@ -98,34 +138,42 @@ def get_attendance_by_date(
             }
             for att in attendances
         ],
-        'message': "Attendance list by date",
-        'code': 200,
+        "message": "Attendance list by date",
+        "code": 200,
         "meta": {
-            "limit": limit,
-            "page": page,
             "total_records": total_records,
             "total_pages": total_pages
-        }
+        },
     }
 
 
-@router.get('/attendance/by-month', description="Get attendance by month")
+@router.get('/attendances/by-month', description="Get attendances filtered by month and optional company_id")
 def get_attendance_by_month(
     auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
-    month: int = Query(..., ge=1, le=12, description="Month (1-12)"),
-    year: int = Query(..., description="Year"),
-    limit: int = 10,
-    page: int = 1,
+    year: int = Query(
+        default=datetime.now().year,
+        description="Filter attendances by year (default is current year)"
+    ),
+    month: int = Query(
+        default=datetime.now().month,
+        description="Filter attendances by month (default is current month)"
+    ),
+    company_id: Optional[uuid.UUID] = Query(
+        default=None,
+        description="Filter attendances by company_id (optional)"
+    ),
+    limit: int = Query(default=10, description="Number of records per page"),
+    page: int = Query(default=1, description="Page number"),
 ):
-    # Check if the user has the required roles
     if not auth_user.roles or (ROLE_ADMIN not in auth_user.roles and ROLE_HR not in auth_user.roles):
-        raise HTTPException(status_code=403, detail="Access denied: Only ADMIN and HR roles can access attendance records.")
+        raise HTTPException(status_code=403, detail="Access denied: Only ADMIN and HR roles can access this data.")
 
-    # Fetch attendance data for the specified month and year
-    attendances, total_records, total_pages = attendance_service.list_attendances_by_month(month, year, limit, page)
+    attendances, total_records, total_pages = attendance_service.list_attendances_by_month(
+        year=year, month=month, company_id=company_id, limit=limit, page=page
+    )
 
     return {
-        'success': True,
+        "success": True,
         "data": [
             {
                 "id": att.id,
@@ -145,16 +193,15 @@ def get_attendance_by_month(
             }
             for att in attendances
         ],
-        'message': "Attendance list by month",
-        'code': 200,
+        "message": "Attendance list by month",
+        "code": 200,
         "meta": {
             "limit": limit,
             "page": page,
             "total_records": total_records,
             "total_pages": total_pages
-        }
+        },
     }
-
 
 @router.post('/identify-face-employee', description="Identify employee and handle attendance")
 def identify_face(
