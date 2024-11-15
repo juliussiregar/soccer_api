@@ -83,3 +83,23 @@ class EmployeeRepository:
         with get_session() as db:
             employees = db.query(Employee).filter(Employee.company_id == company_id).all()
         return employees
+
+    def is_nik_used(self, nik: str, except_id: Optional[str] = None) -> bool:
+        with get_session() as db:
+            client_count = (
+                db.query(Employee)
+                .filter(Employee.nik == nik, Employee.id != except_id)
+                .count()
+            )
+
+        return client_count > 0
+
+    def get_employee_bynik(self,nik:str):
+        with get_session() as db:
+            visitor = (
+                db.query(Employee)
+                .filter(Employee.nik == nik)
+                .first()
+                )
+
+        return visitor

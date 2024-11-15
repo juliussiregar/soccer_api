@@ -10,7 +10,7 @@ from app.utils.etc import id_generator
 
 from app.utils.exception import UnprocessableException
 from app.schemas.visitor import CreateNewVisitor, VisitorFilter
-from app.models.employee import Visitor
+from app.models.employee import Visitor, Employee
 from app.models.face import Faces
 from app.repositories.client import ClientRepository
 from app.repositories.transaction import TransactionRepository
@@ -35,8 +35,8 @@ class VisitorRepository :
     def get_visitor_bynik(self,nik:str):
         with get_session() as db:
             visitor = (
-                db.query(Visitor)
-                .filter(Visitor.nik == nik)
+                db.query(Employee)
+                .filter(Employee.nik == nik)
                 .first()
                 )
 
@@ -150,8 +150,8 @@ class VisitorRepository :
     def is_nik_used(self, nik: str, except_id: Optional[str] = None) -> bool:
         with get_session() as db:
             client_count = (
-                db.query(Visitor)
-                .filter(Visitor.nik == nik, Visitor.id != except_id)
+                db.query(Employee)
+                .filter(Employee.nik == nik, Employee.id != except_id)
                 .count()
             )
 

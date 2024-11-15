@@ -20,6 +20,9 @@ class UpdateCompany(BaseModel):
     start_time: Optional[time] = None
     end_time: Optional[time] = None
 
+class CreateFaceGalleryCompany(BaseModel):
+    id: uuid.UUID
+
 class CompanyData(BaseModel):
     id: uuid.UUID
     name: str

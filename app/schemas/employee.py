@@ -40,5 +40,4 @@ class EmployeeData(BaseModel):
         return str(v) if isinstance(v, UUID) else v
 
     class Config:
-        orm_mode = True
         from_attributes = True

@@ -6,6 +6,9 @@ class CreateFaceGallery(BaseModel):
     facegallery_id: str
     trx_id: Optional[str] = None 
 
+class DeleteFaceGallery(BaseModel):
+    facegallery_id: str
+    trx_id: Optional[str] = None
 
 class EnrollFace(BaseModel):
     user_id: str
