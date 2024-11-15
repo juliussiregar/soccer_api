@@ -17,23 +17,24 @@ def current_jakarta_time() -> datetime:
 def current_jakarta_time_example() -> str:
     return datetime.now(jakarta_timezone).strftime("%Y-%m-%dT%H:%M:%S")
 
+# Create Schema for Check-In
 class CreateCheckIn(BaseModel):
     company_id: uuid.UUID
     employee_id: uuid.UUID
-    # Provide dynamic example for Swagger using current Jakarta time
     check_in: datetime = Field(default_factory=current_jakarta_time, example=current_jakarta_time_example())
     photo_in: str
     location: Optional[str] = None
     type: Optional[str] = "WFO"
 
+# Update Schema for Check-Out
 class UpdateCheckOut(BaseModel):
     company_id: uuid.UUID
     employee_id: uuid.UUID
-    # Provide dynamic example for Swagger using current Jakarta time
     check_out: datetime = Field(default_factory=current_jakarta_time, example=current_jakarta_time_example())
     photo_out: str
     location: Optional[str] = None
 
+# Schema for Retrieving Attendance Data
 class AttendanceData(BaseModel):
     id: int
     company_id: uuid.UUID
@@ -53,7 +54,36 @@ class AttendanceData(BaseModel):
     class Config:
         from_attributes = True
 
-class IdentifyEmployee(BaseModel):
-    image : str
-    company_name:Optional[str] = None
+# Full Update Schema for Attendance (CRUD)
+class UpdateAttendance(BaseModel):
+    company_id: Optional[uuid.UUID]
+    employee_id: Optional[uuid.UUID]
+    check_in: Optional[datetime] = Field(None, example=current_jakarta_time_example())
+    check_out: Optional[datetime] = Field(None, example=current_jakarta_time_example())
+    photo_in: Optional[str] = None
+    photo_out: Optional[str] = None
     location: Optional[str] = None
+    type: Optional[str] = None
+    late: Optional[int] = None
+    overtime: Optional[int] = None
+    description: Optional[str] = None
+
+# Schema for Identifying an Employee via Face
+class IdentifyEmployee(BaseModel):
+    image: str
+    company_name: Optional[str] = None
+    location: Optional[str] = None
+
+# Schema for Creating a New Attendance Entry (Generalized)
+class CreateAttendance(BaseModel):
+    company_id: uuid.UUID
+    employee_id: uuid.UUID
+    check_in: Optional[datetime] = Field(None, example=current_jakarta_time_example())
+    check_out: Optional[datetime] = Field(None, example=current_jakarta_time_example())
+    photo_in: Optional[str] = None
+    photo_out: Optional[str] = None
+    location: Optional[str] = None
+    type: Optional[str] = "WFO"
+    late: Optional[int] = 0
+    overtime: Optional[int] = 0
+    description: Optional[str] = None
