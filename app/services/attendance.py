@@ -1,5 +1,6 @@
 import base64
 from io import BytesIO
+from math import ceil
 from typing import List, Tuple
 from datetime import date, datetime, time, timedelta
 
@@ -82,8 +83,28 @@ class AttendanceService:
         """Helper function to get start of the current day in Asia/Jakarta timezone."""
         return dt.astimezone(jakarta_timezone).replace(hour=0, minute=0, second=0, microsecond=0)
 
-    def list_attendances_by_date(self, filter_date: date) -> List[Attendance]:
-        return self.attendance_repo.get_all_filtered(filter_date)
+    def list_attendances_by_date(self, filter_date: date, limit: int, page: int) -> Tuple[List[Attendance], int, int]:
+        total_records = self.attendance_repo.count_attendances_by_date(filter_date)
+        total_pages = ceil(total_records / limit)
+
+        attendances = self.attendance_repo.get_all_by_date(filter_date, limit, (page - 1) * limit)
+        return attendances, total_records, total_pages
+
+    def list_attendances_by_company(self, company_id: uuid.UUID, limit: int, page: int) -> Tuple[
+        List[Attendance], int, int]:
+        total_records = self.attendance_repo.count_attendances_by_company(company_id)
+        total_pages = ceil(total_records / limit)
+
+        attendances = self.attendance_repo.get_all_by_company(company_id, limit, (page - 1) * limit)
+        return attendances, total_records, total_pages
+
+    def list_attendances_by_month(self, month: int, year: int, limit: int, page: int) -> Tuple[
+        List[Attendance], int, int]:
+        total_records = self.attendance_repo.count_attendances_by_month(month, year)
+        total_pages = ceil(total_records / limit)
+
+        attendances = self.attendance_repo.get_all_by_month(month, year, limit, (page - 1) * limit)
+        return attendances, total_records, total_pages
 
     def create_check_in(self, payload: CreateCheckIn) -> Attendance:
         # Convert check_in to Asia/Jakarta timezone

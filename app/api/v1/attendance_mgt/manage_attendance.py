@@ -5,74 +5,31 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.params import Query
 
-from app.schemas.attendance_mgt import CreateCheckIn, UpdateCheckOut, IdentifyEmployee
+from app.core.constants.auth import ROLE_ADMIN, ROLE_HR
+from app.schemas.attendance_mgt import IdentifyEmployee
 from app.services.attendance import AttendanceService
 from app.middleware.jwt import jwt_middleware, AuthUser
-from app.utils.exception import UnprocessableException, InternalErrorException
 from app.utils.logger import logger
 
 router = APIRouter()
 attendance_service = AttendanceService()
 
-# @router.post('/attendance/check-in')
-# def check_in(
-#     payload: CreateCheckIn,
-#     auth_user: AuthUser = Depends(jwt_middleware)
-# ):
-#     try:
-#         attendance = attendance_service.create_check_in(payload)
-#     except UnprocessableException as e:
-#         raise HTTPException(status_code=422, detail=str(e))
-#     except InternalErrorException as e:
-#         raise HTTPException(status_code=500, detail=str(e))
-#
-#     return {
-#         "message": "Check-in successful",
-#         "attendance": {
-#             "employee_id": attendance.employee_id,
-#             "check_in": attendance.check_in,
-#             "location": attendance.location,
-#             "type": attendance.type,
-#             "created_at": attendance.created_at
-#         }
-#     }
-#
-# @router.put('/attendance/check-out')
-# def check_out(
-#     payload: UpdateCheckOut,
-#     auth_user: AuthUser = Depends(jwt_middleware)
-# ):
-#     try:
-#         attendance = attendance_service.update_check_out(payload)
-#     except UnprocessableException as e:
-#         raise HTTPException(status_code=422, detail=str(e))
-#     except InternalErrorException as e:
-#         raise HTTPException(status_code=500, detail=str(e))
-#
-#     return {
-#         "message": "Check-out successful",
-#         "attendance": {
-#             "employee_id": attendance.employee_id,
-#             "check_out": attendance.check_out,
-#             "location": attendance.location,
-#             "late": attendance.late,
-#             "overtime": attendance.overtime,
-#             "description": attendance.description,
-#             "updated_at": attendance.updated_at
-#         }
-#     }
-
-@router.get('/attendance/by-date')
-def get_attendance_by_date(
-    filter_date: date = Query(
-        default=date.today(),
-        description="Filter date in YYYY-MM-DD format"
-    ),
-    auth_user: AuthUser = Depends(jwt_middleware)
+@router.get('/attendance/by-company', description="Get attendance by company ID")
+def get_attendance_by_company(
+    auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
+    company_id: uuid.UUID,
+    limit: int = 10,
+    page: int = 1,
 ):
-    attendances = attendance_service.list_attendances_by_date(filter_date)
+    # Check if the user has the required roles
+    if not auth_user.roles or (ROLE_ADMIN not in auth_user.roles and ROLE_HR not in auth_user.roles):
+        raise HTTPException(status_code=403, detail="Access denied: Only ADMIN and HR roles can access attendance records.")
+
+    # Fetch attendance data for the specified company
+    attendances, total_records, total_pages = attendance_service.list_attendances_by_company(company_id, limit, page)
 
     return {
+        'success': True,
         "data": [
             {
                 "id": att.id,
@@ -91,8 +48,113 @@ def get_attendance_by_date(
                 "created_at": att.created_at,
             }
             for att in attendances
-        ]
+        ],
+        'message': "Attendance list by company",
+        'code': 200,
+        "meta": {
+            "limit": limit,
+            "page": page,
+            "total_records": total_records,
+            "total_pages": total_pages
+        }
     }
+
+
+@router.get('/attendance/by-date', description="Get attendance by date with pagination")
+def get_attendance_by_date(
+    auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
+    filter_date: date = Query(
+        default=date.today(),
+        description="Filter date in YYYY-MM-DD format"
+    ),
+    limit: int = 10,
+    page: int = 1,
+):
+    # Check if the user has the required roles
+    if not auth_user.roles or (ROLE_ADMIN not in auth_user.roles and ROLE_HR not in auth_user.roles):
+        raise HTTPException(status_code=403, detail="Access denied: Only ADMIN and HR roles can access attendance records.")
+
+    # Fetch attendance data for the specified date with pagination
+    attendances, total_records, total_pages = attendance_service.list_attendances_by_date(filter_date, limit, page)
+
+    return {
+        'success': True,
+        "data": [
+            {
+                "id": att.id,
+                "employee_id": att.employee_id,
+                "company_id": att.company_id,
+                "check_in": att.check_in,
+                "check_out": att.check_out,
+                "photo_in": att.photo_in,
+                "photo_out": att.photo_out,
+                "location": att.location,
+                "type": att.type,
+                "late": att.late,
+                "overtime": att.overtime,
+                "description": att.description,
+                "total_time": str(att.check_out - att.check_in) if att.check_out else None,
+                "created_at": att.created_at,
+            }
+            for att in attendances
+        ],
+        'message': "Attendance list by date",
+        'code': 200,
+        "meta": {
+            "limit": limit,
+            "page": page,
+            "total_records": total_records,
+            "total_pages": total_pages
+        }
+    }
+
+
+@router.get('/attendance/by-month', description="Get attendance by month")
+def get_attendance_by_month(
+    auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
+    month: int = Query(..., ge=1, le=12, description="Month (1-12)"),
+    year: int = Query(..., description="Year"),
+    limit: int = 10,
+    page: int = 1,
+):
+    # Check if the user has the required roles
+    if not auth_user.roles or (ROLE_ADMIN not in auth_user.roles and ROLE_HR not in auth_user.roles):
+        raise HTTPException(status_code=403, detail="Access denied: Only ADMIN and HR roles can access attendance records.")
+
+    # Fetch attendance data for the specified month and year
+    attendances, total_records, total_pages = attendance_service.list_attendances_by_month(month, year, limit, page)
+
+    return {
+        'success': True,
+        "data": [
+            {
+                "id": att.id,
+                "employee_id": att.employee_id,
+                "company_id": att.company_id,
+                "check_in": att.check_in,
+                "check_out": att.check_out,
+                "photo_in": att.photo_in,
+                "photo_out": att.photo_out,
+                "location": att.location,
+                "type": att.type,
+                "late": att.late,
+                "overtime": att.overtime,
+                "description": att.description,
+                "total_time": str(att.check_out - att.check_in) if att.check_out else None,
+                "created_at": att.created_at,
+            }
+            for att in attendances
+        ],
+        'message': "Attendance list by month",
+        'code': 200,
+        "meta": {
+            "limit": limit,
+            "page": page,
+            "total_records": total_records,
+            "total_pages": total_pages
+        }
+    }
+
 
 @router.post('/identify-face-employee', description="Identify employee and handle attendance")
 def identify_face(
@@ -107,15 +169,16 @@ def identify_face(
 
         logger.info(f"Successfully completed {employee_info.get('action')} attendance via Local method.")
         return {
-            'status': 200,
-            'message': f"Employee is Valid by Local. {employee_info.get('action')} successful",
+            'success': True,
             'data': {
                 'nik': employee_info.get('nik', ''),
                 'userName': employee_info.get('user_name', ''),
                 'companyID': employee_info.get('company_id', ''),
                 'companyName': employee_info.get('company_name', ''),
                 'action': employee_info.get('action')
-            }
+            },
+            'message': f"Employee is Valid by Local. {employee_info.get('action')} successful",
+            'code': 200
         }
 
     except HTTPException as e:
@@ -134,15 +197,16 @@ def identify_face(
 
                 logger.info(f"Successfully completed {employee_info.get('action')} attendance via RisetAI.")
                 return {
-                    'status': 200,
-                    'message': f"Employee is Valid by RisetAI. {employee_info.get('action')} successful",
+                    'success': True,
                     'data': {
                         'nik': employee_info.get('nik', ''),
                         'fullName': employee_info.get('user_name', ''),
                         'companyID': employee_info.get('company_id', ''),
                         'companyName': employee_info.get('company_name', ''),
                         'action': employee_info.get('action')
-                    }
+                    },
+                    'message': f"Employee is Valid by RisetAI. {employee_info.get('action')} successful",
+                    'code': 200,
                 }
             except Exception as identify_err:
                 logger.error(f"Fallback identification via RisetAI failed: {str(identify_err)}")

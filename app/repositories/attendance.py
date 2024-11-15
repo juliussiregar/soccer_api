@@ -25,6 +25,71 @@ class AttendanceRepository:
                 .all()
             )
 
+    def get_all_by_company(self, company_id: uuid.UUID, limit: int, offset: int) -> List[Attendance]:
+        with get_session() as db:
+            return (
+                db.query(Attendance)
+                .filter(Attendance.company_id == company_id)
+                .limit(limit)
+                .offset(offset)
+                .all()
+            )
+
+    def count_attendances_by_company(self, company_id: uuid.UUID) -> int:
+        with get_session() as db:
+            return db.query(Attendance).filter(Attendance.company_id == company_id).count()
+
+    def get_all_by_date(self, filter_date: date, limit: int, offset: int) -> List[Attendance]:
+        with get_session() as db:
+            return (
+                db.query(Attendance)
+                .filter(
+                    extract('month', Attendance.created_at) == filter_date.month,
+                    extract('year', Attendance.created_at) == filter_date.year,
+                    extract('day', Attendance.created_at) == filter_date.day
+                )
+                .order_by(Attendance.created_at.desc())
+                .limit(limit)
+                .offset(offset)
+                .all()
+            )
+
+    def count_attendances_by_date(self, filter_date: date) -> int:
+        with get_session() as db:
+            return (
+                db.query(Attendance)
+                .filter(
+                    extract('month', Attendance.created_at) == filter_date.month,
+                    extract('year', Attendance.created_at) == filter_date.year,
+                    extract('day', Attendance.created_at) == filter_date.day
+                )
+                .count()
+            )
+
+    def get_all_by_month(self, month: int, year: int, limit: int, offset: int) -> List[Attendance]:
+        with get_session() as db:
+            return (
+                db.query(Attendance)
+                .filter(
+                    extract('month', Attendance.created_at) == month,
+                    extract('year', Attendance.created_at) == year
+                )
+                .limit(limit)
+                .offset(offset)
+                .all()
+            )
+
+    def count_attendances_by_month(self, month: int, year: int) -> int:
+        with get_session() as db:
+            return (
+                db.query(Attendance)
+                .filter(
+                    extract('month', Attendance.created_at) == month,
+                    extract('year', Attendance.created_at) == year
+                )
+                .count()
+            )
+
     def insert_attendance_checkin(self, payload: CreateCheckIn) -> Attendance:
         attendance = Attendance(
             company_id=payload.company_id,
