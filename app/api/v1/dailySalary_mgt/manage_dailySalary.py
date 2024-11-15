@@ -23,9 +23,7 @@ def create_daily_salary(
     request_body: CreateNewDailySalary
 ):
     if not request_body.employee_id and not request_body.position_id:
-        raise HTTPException(status_code=400, detail="Either employee_id or position_id must be provided, but not both.")
-    if request_body.employee_id and request_body.position_id:
-        raise HTTPException(status_code=400, detail="Cannot provide both employee_id and position_id; select one only.")
+        raise HTTPException(status_code=400, detail="employee_id must be provided")
 
     if ROLE_ADMIN in auth_user.roles:
         company_id = request_body.company_id
@@ -38,14 +36,6 @@ def create_daily_salary(
             employee = employee_service.get_employee(uuid.UUID(request_body.employee_id))
             if str(employee.company_id) != str(company_id):
                 raise HTTPException(status_code=403, detail="Employee does not belong to your company.")
-        # Jika HR mengisi position_id, cek apakah position_id tersebut milik perusahaan yang sama
-        if request_body.position_id:
-            try:
-                position = position_service.get_position(request_body.position_id, company_id)
-            except Exception:
-                raise HTTPException(status_code=404, detail="Position not found")
-            if str(position.company_id) != str(company_id):
-                raise HTTPException(status_code=403, detail="Position does not belong to your company.")
     else:
         raise HTTPException(status_code=403, detail=ACCESS_DENIED_MSG)
 
@@ -53,7 +43,6 @@ def create_daily_salary(
     daily_salary = daily_salary_service.create_daily_salary(CreateNewDailySalary(
         company_id=company_id,
         employee_id=request_body.employee_id,
-        position_id=request_body.position_id,
         hours_rate=request_body.hours_rate,
         standard_hours=request_body.standard_hours,
         max_late=request_body.max_late,
@@ -95,14 +84,6 @@ def get_daily_salary_by_id(
         company_id = auth_user.company_id
         if str(daily_salary.company_id) != str(company_id):
             raise HTTPException(status_code=403, detail=ACCESS_DENIED_MSG)
-        # Cek position_id jika ada
-        if daily_salary.position_id:
-            try:
-                position = position_service.get_position(daily_salary.position_id, company_id)
-            except Exception:
-                raise HTTPException(status_code=404, detail="Position not found")
-            if str(position.company_id) != str(company_id):
-                raise HTTPException(status_code=403, detail="Position does not belong to your company.")
     elif ROLE_ADMIN not in auth_user.roles:
         raise HTTPException(status_code=403, detail=ACCESS_DENIED_MSG)
 
@@ -123,14 +104,6 @@ def update_daily_salary(
         company_id = auth_user.company_id
         if str(daily_salary.company_id) != str(company_id):
             raise HTTPException(status_code=403, detail=ACCESS_DENIED_MSG)
-        # Validasi position_id jika akan diperbarui
-        if request_body.position_id:
-            try:
-                position = position_service.get_position(request_body.position_id, company_id)
-            except Exception:
-                raise HTTPException(status_code=404, detail="Position not found")
-            if str(position.company_id) != str(company_id):
-                raise HTTPException(status_code=403, detail="Position does not belong to your company.")
     elif ROLE_ADMIN not in auth_user.roles:
         raise HTTPException(status_code=403, detail=ACCESS_DENIED_MSG)
 
@@ -154,14 +127,6 @@ def delete_daily_salary(
         company_id = auth_user.company_id
         if str(daily_salary.company_id) != str(company_id):
             raise HTTPException(status_code=403, detail=ACCESS_DENIED_MSG)
-        # Validasi position_id jika ada
-        if daily_salary.position_id:
-            try:
-                position = position_service.get_position(daily_salary.position_id, company_id)
-            except Exception:
-                raise HTTPException(status_code=404, detail="Position not found")
-            if str(position.company_id) != str(company_id):
-                raise HTTPException(status_code=403, detail="Position does not belong to your company.")
     elif ROLE_ADMIN not in auth_user.roles:
         raise HTTPException(status_code=403, detail=ACCESS_DENIED_MSG)
 

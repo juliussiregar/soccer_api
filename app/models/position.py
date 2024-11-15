@@ -15,5 +15,4 @@ class Position(Base):
 
     # Relationships
     company = relationship("Company", back_populates="position")
-    employees = relationship("Employee", back_populates="position")  # Relationship ke Employee
-    daily_salary = relationship("DailySalary", back_populates="position")
+    employees = relationship("Employee", back_populates="position")

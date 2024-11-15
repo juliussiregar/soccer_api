@@ -16,12 +16,6 @@ class DailySalaryService:
             existing_salary = self.daily_salary_repo.get_by_employee_id(uuid.UUID(payload.employee_id))
             if existing_salary:
                 raise UnprocessableException("Daily Salary for this employee already exists.")
-        
-        # Validasi jika position_id sudah ada
-        if payload.position_id:
-            existing_salary = self.daily_salary_repo.get_by_position_id(payload.position_id)
-            if existing_salary:
-                raise UnprocessableException("Daily Salary for this position already exists.")
 
         # Insert jika validasi berhasil
         try:

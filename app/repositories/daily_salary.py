@@ -42,7 +42,6 @@ class DailySalaryRepository:
         daily_salary = DailySalary(
             company_id=payload.company_id,
             employee_id=payload.employee_id,
-            position_id=payload.position_id,
             hours_rate=payload.hours_rate,
             standard_hours=payload.standard_hours,
             max_late=payload.max_late,
@@ -81,8 +80,3 @@ class DailySalaryRepository:
     def get_by_employee_id(self, employee_id: uuid.UUID) -> Optional[DailySalary]:
         with get_session() as db:
             return db.query(DailySalary).filter(DailySalary.employee_id == employee_id).first()
-        
-    # Ambil Daily Salary berdasarkan position_id
-    def get_by_position_id(self, position_id: int) -> Optional[DailySalary]:
-        with get_session() as db:
-            return db.query(DailySalary).filter(DailySalary.position_id == position_id).first()
