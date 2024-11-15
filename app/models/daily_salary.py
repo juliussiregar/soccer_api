@@ -9,7 +9,6 @@ class DailySalary(Base):
     id = Column(Integer, primary_key=True, index=True)
     company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=False)
     employee_id = Column(UUID(as_uuid=True), ForeignKey("employees.id"), nullable=True)
-    position_id = Column(Integer, ForeignKey("positions.id"), nullable=True)
     hours_rate = Column(Integer, nullable=False)
     standard_hours = Column(Integer, nullable=False)
     max_late = Column(Integer, nullable=False)
@@ -22,4 +21,3 @@ class DailySalary(Base):
 
     company = relationship("Company", back_populates="daily_salary")
     employee = relationship("Employee", back_populates="daily_salary")
-    position = relationship("Position", back_populates="daily_salary")

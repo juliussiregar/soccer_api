@@ -8,10 +8,8 @@ class EmployeeMonthlySalary(Base):
     __tablename__ = "employee_monthly_salary"
     id = Column(Integer, primary_key=True, index=True)
     employee_id = Column(UUID(as_uuid=True), ForeignKey("employees.id"), nullable=False)
-    bonus = Column(Integer, nullable=True)
-    bpjs = Column(Integer, nullable=True)
-    tax = Column(Integer, nullable=True)
-    month = Column(String, nullable=False)
+    month = Column(Integer, nullable=False)
+    year = Column(Integer, nullable=False)
     normal_salary = Column(Integer, nullable=False)
     total_salary = Column(Integer, nullable=False)
     created_at = Column(DateTime, server_default=func.timezone(DEFAULT_TZ, func.now()))

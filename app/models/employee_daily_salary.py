@@ -12,6 +12,8 @@ class EmployeeDailySalary(Base):
     hours_worked = Column(Integer, nullable=True)
     late_deduction = Column(Integer, nullable=True)
     overtime_pay = Column(Integer, nullable=True)
+    month = Column(Integer, nullable=False)
+    year = Column(Integer, nullable=False)
     normal_salary = Column(Integer, nullable=False)
     total_salary = Column(Integer, nullable=False)
     created_at = Column(DateTime, server_default=func.timezone(DEFAULT_TZ, func.now()))

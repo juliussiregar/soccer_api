@@ -12,7 +12,6 @@ class DailySalaryFilter(BaseModel):
 class CreateNewDailySalary(BaseModel):
     company_id: Optional[str] = None
     employee_id: Optional[str] = None
-    position_id: Optional[int] = None
     hours_rate: Optional[int] = None
     standard_hours: Optional[int] = None
     max_late: Optional[int] = None
@@ -21,7 +20,6 @@ class CreateNewDailySalary(BaseModel):
     overtime_pay: Optional[int] = None
 
 class UpdateDailySalary(BaseModel):
-    position_id: Optional[int] = None
     hours_rate: Optional[int] = None
     standard_hours: Optional[int] = None
     max_late: Optional[int] = None
@@ -33,7 +31,6 @@ class DailySalaryData(BaseModel):
     id: int
     company_id: str
     employee_id: Optional[str] = None
-    position_id: Optional[int] = None
     hours_rate: Optional[int] = None
     standard_hours: Optional[int] = None
     max_late: Optional[int] = None
