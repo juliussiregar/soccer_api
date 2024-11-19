@@ -1,4 +1,5 @@
 import base64
+from decimal import Decimal, ROUND_DOWN
 from io import BytesIO
 from math import ceil
 from typing import List, Tuple, Optional
@@ -18,13 +19,17 @@ from app.core.constants.app import DEFAULT_TZ
 from app.core.constants.information import CLIENT_NAME
 from app.models.attendance import Attendance
 from app.models.employee import Employee
+from app.models.employee_daily_salary import EmployeeDailySalary
 from app.models.face import Face
 from app.repositories.company import CompanyRepository
+from app.repositories.daily_salary import DailySalaryRepository
 from app.repositories.employee import EmployeeRepository
+from app.repositories.employee_daily_salary import EmployeeDailySalaryRepository
 from app.repositories.face import FaceRepository
 from app.schemas.attendance_mgt import CreateCheckIn, UpdateCheckOut, IdentifyEmployee, CreateAttendance, \
     UpdateAttendance
 from app.repositories.attendance import AttendanceRepository
+from app.schemas.employee_daily_salary import CreateNewEmployeeDailySalary
 from app.schemas.faceapi_mgt import IdentifyFace
 from app.services.employee import EmployeeService
 from app.utils.date import get_now
@@ -46,6 +51,8 @@ class AttendanceService:
         self.attendance_repo = AttendanceRepository()
         self.face_repo = FaceRepository()
         self.company_repo = CompanyRepository()
+        self.daily_salary_repo = DailySalaryRepository()
+        self.employee_daily_salary_repo = EmployeeDailySalaryRepository()
 
         self.employee_service = EmployeeService()
 
@@ -158,55 +165,140 @@ class AttendanceService:
         return new_attendance
 
     def update_check_out(self, payload: UpdateCheckOut) -> Attendance:
+        # Validasi apakah company ada
         company = self.company_repo.get_company_by_id(payload.company_id)
-
         if not company:
             raise HTTPException(status_code=404, detail="Company not found")
 
-        # Define standard working hours in Asia/Jakarta timezone
-        standard_start_time = company.start_time if company.start_time else time(9, 0)  # 9:00 AM
-        standard_end_time = company.end_time if company.end_time else time(17, 0)  # 5:00 PM
+        # Validasi apakah employee ada di company tersebut
+        employee = self.employee_repo.get_employee_by_id(payload.employee_id)
+        if not employee or employee.company_id != payload.company_id:
+            raise HTTPException(status_code=404, detail="Employee not found in the specified company")
 
-        # Convert check_out to Asia/Jakarta timezone
-        check_out_time = payload.check_out.astimezone(jakarta_timezone)
-        existing_attendance = self.attendance_repo.existing_attendance(payload.employee_id, self.get_start_of_day(datetime.now(jakarta_timezone)))
-
+        # Validasi apakah employee telah melakukan check-in hari ini
+        today_start = self.get_start_of_day(datetime.now(jakarta_timezone))
+        existing_attendance = self.attendance_repo.existing_attendance(payload.employee_id, today_start)
         if not existing_attendance:
             raise UnprocessableException("Employee has not checked in today.")
 
-        # Calculate late and overtime
+        # Validasi dan hitung waktu check-out
+        check_out_time = payload.check_out.astimezone(jakarta_timezone)
+        standard_start_time = company.start_time or time(9, 0)
+        standard_end_time = company.end_time or time(17, 0)
+
         check_in_time = existing_attendance.check_in.astimezone(jakarta_timezone).time()
         check_out_time_only = check_out_time.time()
 
-        # Calculate late (in minutes)
+        # Logging untuk debug waktu
+        logger.info(f"Check-in time: {check_in_time}, Check-out time: {check_out_time_only}")
+        logger.info(f"Standard working hours: {standard_start_time} to {standard_end_time}")
+
+        # Hitung keterlambatan dan lembur
         late_minutes = 0
         if check_in_time > standard_start_time:
-            late_minutes = (datetime.combine(date.today(), check_in_time) - datetime.combine(date.today(), standard_start_time)).seconds // 60
+            late_minutes = (datetime.combine(date.today(), check_in_time) - datetime.combine(date.today(),
+                                                                                             standard_start_time)).seconds // 60
 
-        # Calculate overtime (in minutes)
         overtime_minutes = 0
         if check_out_time_only > standard_end_time:
-            overtime_minutes = (datetime.combine(date.today(), check_out_time_only) - datetime.combine(date.today(), standard_end_time)).seconds // 60
+            overtime_minutes = (datetime.combine(date.today(), check_out_time_only) - datetime.combine(date.today(),
+                                                                                                       standard_end_time)).seconds // 60
 
-        # Convert late and overtime minutes to hours and minutes
+        # Convert keterlambatan dan lembur ke format jam dan menit
         late_hours = late_minutes // 60
         late_remaining_minutes = late_minutes % 60
         overtime_hours = overtime_minutes // 60
         overtime_remaining_minutes = overtime_minutes % 60
 
-        # Set description with hours and minutes
+        # Buat deskripsi
         description = (
             f"Checked out with {late_hours} hours {late_remaining_minutes} minutes late and "
             f"{overtime_hours} hours {overtime_remaining_minutes} minutes overtime."
         )
+        logger.info(f"Description: {description}")
 
+        # Update check-out di attendance
         try:
-            # Update payload's check_out with Jakarta timezone
             payload.check_out = check_out_time
-            updated_attendance = self.attendance_repo.update_attendance_checkout(payload, late_minutes, overtime_minutes, description)
+            updated_attendance = self.attendance_repo.update_attendance_checkout(
+                payload, late_minutes, overtime_minutes, description
+            )
+
+            # Calculate Daily Salary
+            daily_salary = self.daily_salary_repo.get_by_employee_id(payload.employee_id)
+            if daily_salary:
+                hours_worked = Decimal(
+                    (updated_attendance.check_out - updated_attendance.check_in).total_seconds() / 3600
+                ).quantize(Decimal('0.01'))
+                # hours_worked = Decimal(7)
+
+                # Normal salary calculation
+                normal_salary = Decimal(daily_salary.standard_hours) * Decimal(daily_salary.hours_rate)
+
+                # Overtime calculation
+                overtime_pay = Decimal(0)
+                if overtime_minutes > daily_salary.min_overtime:  # Min overtime in minutes
+                    overtime_pay = Decimal(overtime_hours) * Decimal(daily_salary.overtime_rate)
+
+                # Late deduction calculation
+                late_deduction = Decimal(0)
+                if late_minutes > daily_salary.max_late:  # Deduction applies only if late exceeds max_late
+                    excess_late_minutes = late_minutes - daily_salary.max_late  # Calculate excess late minutes
+                    excess_late_hours = Decimal(excess_late_minutes) // Decimal(60)  # Hours
+                    remaining_late_minutes = Decimal(excess_late_minutes) % Decimal(60)  # Remaining minutes
+                    total_excess_hours = excess_late_hours + (
+                                remaining_late_minutes / Decimal(60))  # Total excess hours
+                    late_deduction = (total_excess_hours * Decimal(daily_salary.late_deduction_rate)).quantize(
+                        Decimal('0.01'), rounding=ROUND_DOWN
+                    )
+
+                logger.info(f"Late minutes: {late_minutes}")
+                logger.info(
+                    f"Excess late minutes: {excess_late_minutes if late_minutes > daily_salary.max_late else 0}")
+                logger.info(f"Excess late hours: {total_excess_hours if late_minutes > daily_salary.max_late else 0}")
+                logger.info(f"Late deduction: {late_deduction}")
+
+                # Adjusted salary
+                adjusted_salary = (hours_worked * Decimal(daily_salary.hours_rate)).quantize(Decimal('0.01'))
+
+                # Total salary calculation
+                total_salary = (adjusted_salary + overtime_pay - late_deduction).quantize(Decimal('0.01'))
+
+                # Logging for debugging
+                logger.info(f"Hours worked: {hours_worked}")
+                logger.info(f"Normal salary: {normal_salary}")
+                logger.info(f"Overtime pay: {overtime_pay}")
+                logger.info(f"Late deduction: {late_deduction}")
+                logger.info(f"Adjusted salary: {adjusted_salary}")
+                logger.info(f"Total salary: {total_salary}")
+
+                # Payload untuk gaji harian
+                new_salary_payload = CreateNewEmployeeDailySalary(
+                    employee_id=payload.employee_id,
+                    work_date=today_start.date(),
+                    hours_worked=Decimal(hours_worked),
+                    late_deduction=Decimal(late_deduction),
+                    overtime_pay=Decimal(overtime_pay),
+                    month=today_start.month,
+                    year=today_start.year,
+                    normal_salary=Decimal(normal_salary),
+                    total_salary=Decimal(total_salary),
+                )
+                logger.info(f"New salary payload: {new_salary_payload}")
+
+                # Periksa apakah data gaji sudah ada
+                existing_salary = self.employee_daily_salary_repo.get_by_employee_id_and_date(
+                    payload.employee_id, today_start.date()
+                )
+                if not existing_salary:
+                    self.employee_daily_salary_repo.insert(new_salary_payload)
+                    logger.info("Inserted new salary data.")
+                else:
+                    logger.info("Salary data already exists, skipping insertion.")
+
         except Exception as err:
-            logger.error(str(err))
-            raise InternalErrorException("Failed to update check-out.")
+            logger.error(f"Error during check-out update: {err}")
+            raise InternalErrorException("Failed to update check-out or calculate daily salary.")
 
         return updated_attendance
 

@@ -1,4 +1,4 @@
-# api/v1/daily_salary_mgt/manage_daily_salary.py
+# api/v1/daily_salary_mgt/manage_employee_daily_salary.py
 
 import uuid
 from fastapi import APIRouter, Depends, HTTPException
@@ -46,9 +46,9 @@ def create_daily_salary(
         hours_rate=request_body.hours_rate,
         standard_hours=request_body.standard_hours,
         max_late=request_body.max_late,
-        late_deduction=request_body.late_deduction,
+        late_deduction_rate=request_body.late_deduction_rate,
         min_overtime=request_body.min_overtime,
-        overtime_pay=request_body.overtime_pay
+        overtime_rate=request_body.overtime_rate
     ))
 
     return {"data": daily_salary}

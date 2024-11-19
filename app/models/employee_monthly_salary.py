@@ -1,6 +1,6 @@
 from .base import Base
 
-from sqlalchemy import UUID, Column, ForeignKey, DateTime, func, String, Integer
+from sqlalchemy import UUID, Column, ForeignKey, DateTime, func, Integer, Numeric
 from sqlalchemy.orm import relationship
 from app.core.constants.app import DEFAULT_TZ
 
@@ -10,8 +10,8 @@ class EmployeeMonthlySalary(Base):
     employee_id = Column(UUID(as_uuid=True), ForeignKey("employees.id"), nullable=False)
     month = Column(Integer, nullable=False)
     year = Column(Integer, nullable=False)
-    normal_salary = Column(Integer, nullable=False)
-    total_salary = Column(Integer, nullable=False)
+    normal_salary = Column(Numeric(10, 2), nullable=False)
+    total_salary = Column(Numeric(10, 2), nullable=False)
     created_at = Column(DateTime, server_default=func.timezone(DEFAULT_TZ, func.now()))
     updated_at = Column(DateTime, nullable=True)
     deleted_at = Column(DateTime, nullable=True)
