@@ -45,9 +45,9 @@ class DailySalaryRepository:
             hours_rate=payload.hours_rate,
             standard_hours=payload.standard_hours,
             max_late=payload.max_late,
-            late_deduction=payload.late_deduction,
+            late_deduction_rate=payload.late_deduction_rate,
             min_overtime=payload.min_overtime,
-            overtime_pay=payload.overtime_pay
+            overtime_rate=payload.overtime_rate
         )
         with get_session() as db:
             db.add(daily_salary)

@@ -5,6 +5,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 
 from app.core.database import get_session
+from app.models.company import Company
 from app.models.employee import Employee
 from app.models.face import Face
 from app.schemas.face_mgt import CreateFace, UpdateFace
@@ -120,9 +121,11 @@ class FaceRepository:
                     Employee.nik,
                     Employee.user_name,
                     Face.photo,
-                    Employee.company,
-                    Face.created_at)
-                .join(Employee, Face.employee_id == Employee.id, isouter=True)  # LEFT JOIN
+                    Face.created_at,
+                    Company.name.label("company_name")  # Fetch company name explicitly
+                )
+                .join(Employee, Face.employee_id == Employee.id, isouter=True)  # LEFT JOIN with Employee
+                .join(Company, Face.company_id == Company.id, isouter=True)  # LEFT JOIN with Company
                 .all()
             )
         return results
