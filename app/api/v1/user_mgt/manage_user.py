@@ -35,6 +35,7 @@ def user_list(
             {
                 "id": user.id,
                 "company_id": user.company_id,
+                "company_name": user.company.name,  # Tambahkan nama perusahaan
                 "full_name": user.full_name,
                 "username": user.username,
                 "roles": [role.name for role in user.roles],

@@ -72,7 +72,7 @@ class UserRepository:
 
     def get_all_filtered(self, filter: UserFilter) -> List[User]:
         with get_session() as db:
-            query = db.query(User)
+            query = db.query(User).join(User.company).options(joinedload(User.company))
 
             # Filter based on the provided filters
             query = self.filtered(query, filter)
@@ -90,6 +90,7 @@ class UserRepository:
                 query = query.offset(offset)
 
             return query.options(joinedload(User.roles)).all()
+
 
 
     def count_by_filter(self, filter: UserFilter) -> int:
