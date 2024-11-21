@@ -55,78 +55,43 @@ def get_companies(
     q: Optional[str] = None
 ):
     if auth_user.roles and ROLE_ADMIN in auth_user.roles:
-        _filter = PositionFilter(limit=limit, page=page, search=q)
+        _filter = CompanyFilter(limit=limit, page=page, search=q)
     else:
         raise HTTPException(status_code=403, detail="Access denied: Only ADMIN role can get all companies.")
 
-    _filter = CompanyFilter(limit=limit, page=page, search=q)
     companies, total_rows, total_pages = company_service.list_companies(_filter)
 
     return {
         "success": True,
-        "data": [
-            {
-                "id": company.id,
-                "name": company.name,
-                "logo": company.logo,
-                "start_time": company.start_time,
-                "end_time": company.end_time,
-                "created_at": company.created_at,
-                "updated_at": company.updated_at
-            }
-            for company in companies
-        ],
+        "data": companies,
         "message": "Companies retrieved successfully",
         "code": 200,
         "meta": {
             "limit": limit,
             "page": page,
             "total_rows": total_rows,
-            "total_pages": total_pages
-        }
+            "total_pages": total_pages,
+        },
     }
+
 
 @router.get('/companies/{company_id}')
 def get_company_by_id(
-        auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
-        company_id: uuid.UUID
+    auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
+    company_id: uuid.UUID
 ):
-    if auth_user.roles and ROLE_ADMIN in auth_user.roles:
-        company = company_service.get_company(company_id)
-        logging.info(f"Access granted to ADMIN for company_id {company_id}")
-    elif auth_user.roles and ROLE_HR in auth_user.roles:
-        company = company_service.get_company(company_id)
-        logging.info(f"HR access attempt for company_id {company_id}")
-        logging.info(f"Company retrieved: {company.id if company else 'None'}, Auth user company_id: {auth_user.company_id}")
+    if not auth_user.roles or ROLE_ADMIN not in auth_user.roles:
+        raise HTTPException(status_code=403, detail="Access denied: Only ADMIN role can access this endpoint.")
 
-        if not company or str(company.id) != str(auth_user.company_id):
-            logging.warning("Access denied: HR role attempted to access another company's data.")
-            raise HTTPException(
-                status_code=403,
-                detail="Access denied: HR role can only access data for their assigned company."
-            )
-    else:
-        logging.warning("Access denied: user lacks necessary role.")
-        raise HTTPException(status_code=403, detail="Access denied for this role")
-
-    if company is None:
-        logging.error("Company not found.")
-        raise HTTPException(status_code=404, detail="Company not found")
+    company = company_service.get_company(company_id)
 
     return {
         "success": True,
-        "data": {
-            "id": company.id,
-            "name": company.name,
-            "logo": company.logo,
-            "start_time": company.start_time,
-            "end_time": company.end_time,
-            "created_at": company.created_at,
-            "updated_at": company.updated_at
-        },
+        "data": company,
         "message": "Company details retrieved successfully",
-        "code": 200
+        "code": 200,
     }
+
 
 @router.put('/companies/{company_id}')
 def update_company(

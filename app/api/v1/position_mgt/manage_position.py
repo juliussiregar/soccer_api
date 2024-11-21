@@ -71,6 +71,7 @@ def get_positions(
         "positions": [
             {
                 "id": position.id,
+                "company_id": position.company_id,
                 "name": position.name,
                 "description": position.description,
                 "created_at": position.created_at,

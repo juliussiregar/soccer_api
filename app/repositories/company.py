@@ -171,3 +171,31 @@ class CompanyRepository:
             )
 
         return company_count > 0
+
+    def get_all_companies_with_employees(self, filter: CompanyFilter) -> List[Company]:
+        with get_session() as db:
+            query = db.query(Company).options(joinedload(Company.employee))
+            query = self.filtered(query, filter)
+
+            # Include companies with `deleted_at` as None
+            query = query.filter(Company.deleted_at.is_(None))
+
+            query = query.order_by(Company.created_at.desc())
+
+            if filter.limit:
+                query = query.limit(filter.limit)
+            if filter.page and filter.limit:
+                offset = (filter.page - 1) * filter.limit
+                query = query.offset(offset)
+
+            return query.all()
+
+    def get_company_with_employees_by_id(self, company_id: uuid.UUID) -> Optional[Company]:
+        with get_session() as db:
+            company = (
+                db.query(Company)
+                .options(joinedload(Company.employee))
+                .filter(Company.id == company_id, Company.deleted_at.is_(None))
+                .first()
+            )
+        return company

@@ -33,17 +33,64 @@ class CompanyService:
 
         return company
 
-    def get_company(self, company_id: uuid.UUID) -> CompanyData:
-        company = self.company_repo.get_company_by_id(company_id)
-        if company is None:
-            raise UnprocessableException("Company not found")
-        return company
-
-    def list_companies(self, filter: CompanyFilter) -> Tuple[List[CompanyData], int, int]:
-        companies = self.company_repo.get_all_filtered(filter)
+    def list_companies(self, filter: CompanyFilter) -> Tuple[List[dict], int, int]:
+        companies = self.company_repo.get_all_companies_with_employees(filter)
         total_rows = self.company_repo.count_by_filter(filter)
         total_pages = (total_rows + filter.limit - 1) // filter.limit if filter.limit else 1
-        return companies, total_rows, total_pages
+
+        company_list = []
+        for company in companies:
+            employees = [
+                {
+                    "employee_id": emp.id,
+                    "user_name": emp.user_name,
+                    "nik": emp.nik,
+                    "email": emp.email,
+                    "position_id": emp.position_id,
+                }
+                for emp in company.employee
+            ]
+            company_list.append(
+                {
+                    "id": company.id,
+                    "name": company.name,
+                    "logo": company.logo,
+                    "start_time": company.start_time,
+                    "end_time": company.end_time,
+                    "created_at": company.created_at,
+                    "updated_at": company.updated_at,
+                    "employees": employees,
+                }
+            )
+
+        return company_list, total_rows, total_pages
+
+    def get_company(self, company_id: uuid.UUID) -> dict:
+        company = self.company_repo.get_company_with_employees_by_id(company_id)
+        if not company:
+            raise UnprocessableException("Company not found")
+
+        employees = [
+            {
+                "employee_id": emp.id,
+                "user_name": emp.user_name,
+                "nik": emp.nik,
+                "email": emp.email,
+                "position_id": emp.position_id,
+            }
+            for emp in company.employee
+        ]
+
+        return {
+            "id": company.id,
+            "name": company.name,
+            "logo": company.logo,
+            "start_time": company.start_time,
+            "end_time": company.end_time,
+            "created_at": company.created_at,
+            "updated_at": company.updated_at,
+            "employees": employees,
+        }
 
     def update_company(self, company_id: uuid.UUID, payload: UpdateCompany) -> CompanyData:
         company = self.company_repo.update(company_id, payload)
