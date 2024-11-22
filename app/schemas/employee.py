@@ -1,4 +1,5 @@
 # schemas/employee.py
+import uuid
 
 from pydantic import BaseModel, Field, validator
 from typing import Optional
@@ -10,27 +11,30 @@ class EmployeeFilter(BaseModel):
     limit: Optional[int] = None
     page: Optional[int] = None
     search: Optional[str] = None
-    company_id: Optional[str] = None
+    company_id: Optional[uuid.UUID] = None
 
 class CreateNewEmployee(BaseModel):
-    company_id: Optional[str] = None
+    company_id: Optional[uuid.UUID] = None
     position_id: int
     user_name: str
     nik: str
     email: str
+    photo: Optional[str] = None
 
 class UpdateEmployee(BaseModel):
     user_name: Optional[str] = None
     nik: Optional[str] = None
     email: Optional[str] = None
+    photo: Optional[str] = None
 
 class EmployeeData(BaseModel):
-    id: str
-    company_id: str
+    id: uuid.UUID
+    company_id: uuid.UUID
     position_id: int
     user_name: str
     nik: str
     email: str
+    photo: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime]
 

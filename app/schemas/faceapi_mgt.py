@@ -47,7 +47,7 @@ class CompareImage(BaseModel):
     target_image:str
     trx_id:Optional[str] = None
 
-class DeleteVisitor(BaseModel):
+class DeleteFace(BaseModel):
     user_id:str
     facegallery_id:str
     trx_id:Optional[str] = None

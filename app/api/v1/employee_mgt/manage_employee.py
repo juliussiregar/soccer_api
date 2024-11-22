@@ -32,10 +32,12 @@ def create_employee(
         position_id=request_body.position_id,
         user_name=request_body.user_name,
         nik=request_body.nik,
-        email=request_body.email
+        email=request_body.email,
+        photo=request_body.photo
     ))
 
     return {"data": employee}
+
 
 @router.get('/employees')
 def get_employees(
@@ -63,11 +65,11 @@ def get_employee_by_id(
     if employee is None:
         raise HTTPException(status_code=404, detail="Employee not found")
 
-    # Convert to string for consistent comparison
     if ROLE_HR in auth_user.roles and str(employee.company_id) != str(auth_user.company_id):
         raise HTTPException(status_code=403, detail=ACCESS_DENIED_MSG)
 
     return {"data": employee}
+
 
 
 @router.put('/employees/{employee_id}')
@@ -80,7 +82,6 @@ def update_employee(
     if employee is None:
         raise HTTPException(status_code=404, detail="Employee not found")
 
-    # Convert to string for consistent comparison
     if ROLE_HR in auth_user.roles and str(employee.company_id) != str(auth_user.company_id):
         raise HTTPException(status_code=403, detail=ACCESS_DENIED_MSG)
 

@@ -8,8 +8,8 @@ from typing import Any, Dict, List, Tuple
 from app.core.config import settings
 from app.utils.exception import InternalErrorException
 from app.utils.logger import logger
-from app.schemas.faceapi_mgt import CreateEnrollFace, CreateFaceGallery, DeleteVisitor, GetEnrollFace, IdentifyFace, \
-    DeleteFaceGallery
+from app.schemas.faceapi_mgt import CreateEnrollFace, CreateFaceGallery, GetEnrollFace, IdentifyFace, \
+    DeleteFaceGallery, DeleteFace
 # from app.repository.integration import IntegrationLogRepository
 # from app.schema.integration import IntegrationLogCreate
 from app.core.constants.request import REQUEST_GET, REQUEST_POST
@@ -207,7 +207,7 @@ class FaceApiClient:
             raise HTTPException(status_code=int(body["status"]), detail=body["status_message"])
         return url,data
     
-    def delete_visitor(self,payload:DeleteVisitor):
+    def delete_face(self,payload:DeleteFace):
         url = f"{self.base_url}/risetai/face-api/facegallery/delete-face"
         payload_json = payload.dict()
         response = requests.delete(url, json=payload_json, headers=self.headers)
@@ -215,7 +215,7 @@ class FaceApiClient:
         is_ok = response.status_code != status.HTTP_200_OK
         if is_ok:
             logger.error(
-                f"RISETAI - POST FaceGallery {response.status_code} : {response.content}"
+                f"RISETAI - DELETE FaceGallery {response.status_code} : {response.content}"
             )
         else:
             body = response.json().get("risetai")

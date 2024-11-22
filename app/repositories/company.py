@@ -5,6 +5,7 @@ from sqlalchemy.orm import Query
 
 from app.core.database import get_session
 from app.models.company import Company
+from app.models.employee import Employee
 from app.schemas.company import CreateNewCompany, UpdateCompany, CompanyFilter, CreateFaceGalleryCompany
 from sqlalchemy.orm import joinedload
 from app.utils.date import get_now
@@ -199,3 +200,15 @@ class CompanyRepository:
                 .first()
             )
         return company
+
+    def get_company_by_employee_id(self, employee_id: uuid.UUID) -> Optional[Company]:
+        with get_session() as db:
+            employee = (
+                db.query(Employee)
+                .options(joinedload(Employee.company))
+                .filter(Employee.id == employee_id)
+                .first()
+            )
+            if employee:
+                return employee.company
+            return None
