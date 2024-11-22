@@ -26,11 +26,21 @@ class UpdateDailySalary(BaseModel):
     late_deduction_rate: Optional[int] = None
     min_overtime: Optional[int] = None
     overtime_rate: Optional[int] = None
+    
+    
+class EmployeeData(BaseModel):
+    id: str
+    full_name: str
+    email: Optional[str]
+
+    class Config:
+        from_attributes = True
 
 class DailySalaryData(BaseModel):
     id: int
     company_id: str
     employee_id: Optional[str] = None
+    employee: Optional[EmployeeData] = None  # Include employee data
     hours_rate: Optional[int] = None
     standard_hours: Optional[int] = None
     max_late: Optional[int] = None

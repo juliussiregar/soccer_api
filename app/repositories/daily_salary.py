@@ -13,7 +13,12 @@ class DailySalaryRepository:
     
     def get_daily_salary_by_id(self, daily_salary_id: int) -> Optional[DailySalary]:
         with get_session() as db:
-            daily_salary = db.query(DailySalary).filter(DailySalary.id == daily_salary_id).first()
+            daily_salary = (
+                db.query(DailySalary)
+                .options(joinedload(DailySalary.employee))  # Include employee data
+                .filter(DailySalary.id == daily_salary_id)
+                .first()
+            )
         return daily_salary
 
     def filtered(self, query: Query, filter: DailySalaryFilter) -> Query:
@@ -23,7 +28,10 @@ class DailySalaryRepository:
 
     def get_all_filtered(self, filter: DailySalaryFilter) -> List[DailySalary]:
         with get_session() as db:
-            query = db.query(DailySalary).options(joinedload(DailySalary.company))
+            query = db.query(DailySalary).options(
+                joinedload(DailySalary.company),
+                joinedload(DailySalary.employee),  # Include employee data
+            )
             query = self.filtered(query, filter).order_by(DailySalary.created_at.desc())
             if filter.limit:
                 query = query.limit(filter.limit)
@@ -31,7 +39,7 @@ class DailySalaryRepository:
                 offset = (filter.page - 1) * filter.limit
                 query = query.offset(offset)
             return query.all()
-
+        
     def count_by_filter(self, filter: DailySalaryFilter) -> int:
         with get_session() as db:
             query = db.query(DailySalary)
