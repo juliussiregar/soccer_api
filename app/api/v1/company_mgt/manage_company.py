@@ -47,6 +47,7 @@ def create_company(
         "code": 200
     }
 
+
 @router.get('/companies')
 def get_companies(
     auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
@@ -54,10 +55,8 @@ def get_companies(
     page: int = 1,
     q: Optional[str] = None
 ):
-    if auth_user.roles and ROLE_ADMIN in auth_user.roles:
-        _filter = CompanyFilter(limit=limit, page=page, search=q)
-    else:
-        raise HTTPException(status_code=403, detail="Access denied: Only ADMIN role can get all companies.")
+    # Tidak lagi memeriksa roles, hanya memastikan pengguna telah login
+    _filter = CompanyFilter(limit=limit, page=page, search=q)
 
     companies, total_rows, total_pages = company_service.list_companies(_filter)
 
