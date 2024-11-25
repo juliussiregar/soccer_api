@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.params import Query
 
 from app.core.constants.auth import ROLE_ADMIN, ROLE_HR
-from app.schemas.attendance_mgt import IdentifyEmployee, UpdateAttendance, CreateAttendance
+from app.schemas.attendance_mgt import IdentifyEmployee, UpdateAttendance, CreateAttendance, AttendanceFilter
 from app.services.attendance import AttendanceService
 from app.middleware.jwt import jwt_middleware, AuthUser
 from app.utils.logger import logger
@@ -76,14 +76,18 @@ def delete_attendance(
 @router.get('/attendances', description="List all attendances with optional filtering by company_id")
 def list_attendances(
         auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
-        company_id: Optional[uuid.UUID] = None,
         limit: int = Query(default=10, description="Number of records per page"),
         page: int = Query(default=1, description="Page number"),
+        q: Optional[str] = None
 ):
-    if not auth_user.roles or (ROLE_ADMIN not in auth_user.roles and ROLE_HR not in auth_user.roles):
+    if auth_user.roles and ROLE_ADMIN in auth_user.roles:
+        _filter = AttendanceFilter(limit=limit, page=page, search=q)
+    elif auth_user.roles and ROLE_HR in auth_user.roles:
+        _filter = AttendanceFilter(limit=limit, page=page, search=q, company_id=auth_user.company_id)
+    else:
         raise HTTPException(status_code=403, detail="Access denied: Only ADMIN or HR roles can view attendances.")
 
-    attendances, total_records, total_pages = attendance_service.list_attendances(company_id, limit, page)
+    attendances, total_records, total_pages = attendance_service.list_attendances(_filter)
     return {
         "success": True,
         "data": attendances,
@@ -109,12 +113,16 @@ def get_attendance_by_date(
         default=None,
         description="Filter attendances by company_id (optional)"
     ),
+    search: Optional[str] = Query(
+        default=None,
+        description="Search by employee name or attendance description"
+    ),
 ):
     if not auth_user.roles or (ROLE_ADMIN not in auth_user.roles and ROLE_HR not in auth_user.roles):
         raise HTTPException(status_code=403, detail="Access denied: Only ADMIN and HR roles can access this data.")
 
     attendances, total_records, total_pages = attendance_service.list_attendances_by_date(
-        filter_date=filter_date, company_id=company_id
+        filter_date=filter_date, company_id=company_id, search=search
     )
 
     return {
@@ -135,6 +143,27 @@ def get_attendance_by_date(
                 "description": att.description,
                 "total_time": str(att.check_out - att.check_in) if att.check_out else None,
                 "created_at": att.created_at,
+                "company": {
+                    "id": att.company.id,
+                    "name": att.company.name,
+                    "created_at": att.company.created_at,
+                    "updated_at": att.company.updated_at,
+                    "deleted_at": att.company.deleted_at,
+                    "logo": att.company.logo,
+                    "start_time": att.company.start_time,
+                    "end_time": att.company.end_time,
+                } if att.company else None,
+                "employee": {
+                    "id": att.employee.id,
+                    "nik": att.employee.nik,
+                    "user_name": att.employee.user_name,
+                    "email": att.employee.email,
+                    "position_id": att.employee.position_id,
+                    "company_id": att.employee.company_id,
+                    "created_at": att.employee.created_at,
+                    "updated_at": att.employee.updated_at,
+                    "deleted_at": att.employee.deleted_at,
+                } if att.employee else None,
             }
             for att in attendances
         ],
@@ -145,7 +174,6 @@ def get_attendance_by_date(
             "total_pages": total_pages
         },
     }
-
 
 @router.get('/attendances/by-month', description="Get attendances filtered by month and optional company_id")
 def get_attendance_by_month(
@@ -162,6 +190,10 @@ def get_attendance_by_month(
         default=None,
         description="Filter attendances by company_id (optional)"
     ),
+    search: Optional[str] = Query(
+        default=None,
+        description="Search by employee name or attendance description"
+    ),
     limit: int = Query(default=10, description="Number of records per page"),
     page: int = Query(default=1, description="Page number"),
 ):
@@ -169,7 +201,7 @@ def get_attendance_by_month(
         raise HTTPException(status_code=403, detail="Access denied: Only ADMIN and HR roles can access this data.")
 
     attendances, total_records, total_pages = attendance_service.list_attendances_by_month(
-        year=year, month=month, company_id=company_id, limit=limit, page=page
+        year=year, month=month, company_id=company_id, limit=limit, page=page, search=search
     )
 
     return {
@@ -190,6 +222,27 @@ def get_attendance_by_month(
                 "description": att.description,
                 "total_time": str(att.check_out - att.check_in) if att.check_out else None,
                 "created_at": att.created_at,
+                "company": {
+                    "id": att.company.id,
+                    "name": att.company.name,
+                    "created_at": att.company.created_at,
+                    "updated_at": att.company.updated_at,
+                    "deleted_at": att.company.deleted_at,
+                    "logo": att.company.logo,
+                    "start_time": att.company.start_time,
+                    "end_time": att.company.end_time,
+                } if att.company else None,
+                "employee": {
+                    "id": att.employee.id,
+                    "nik": att.employee.nik,
+                    "user_name": att.employee.user_name,
+                    "email": att.employee.email,
+                    "position_id": att.employee.position_id,
+                    "company_id": att.employee.company_id,
+                    "created_at": att.employee.created_at,
+                    "updated_at": att.employee.updated_at,
+                    "deleted_at": att.employee.deleted_at,
+                } if att.employee else None,
             }
             for att in attendances
         ],

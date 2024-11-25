@@ -4,8 +4,12 @@ from typing import List, Tuple
 import uuid
 
 from app.clients.face_api import FaceApiClient
+from app.repositories.application import ApplicationRepository
+from app.repositories.attendance import AttendanceRepository
 from app.repositories.company import CompanyRepository
+from app.repositories.daily_salary import DailySalaryRepository
 from app.repositories.employee import EmployeeRepository
+from app.repositories.employee_daily_salary import EmployeeDailySalaryRepository
 from app.schemas.employee import EmployeeFilter, CreateNewEmployee, UpdateEmployee, EmployeeData
 from app.schemas.faceapi_mgt import CreateEnrollFace, DeleteFace
 from app.utils.exception import UnprocessableException, InternalErrorException
@@ -14,6 +18,10 @@ from app.utils.logger import logger
 
 class EmployeeService:
     def __init__(self):
+        self.application_repo = ApplicationRepository()
+        self.daily_salary_repo = DailySalaryRepository()
+        self.employee_daily_salary_repo = EmployeeDailySalaryRepository()
+        self.attendance_repo = AttendanceRepository()
         self.company_repo = CompanyRepository()
         self.face_api_clients = FaceApiClient()
         self.employee_repo = EmployeeRepository()
@@ -158,6 +166,27 @@ class EmployeeService:
 
             if company is None:
                 raise UnprocessableException("Company not found")
+
+            employee_attendance = self.attendance_repo.delete_attendance_by_employee_id(employee_id)
+
+            if employee_attendance is None:
+                raise UnprocessableException("Employee ID in Attendance not found")
+
+            check_employee_daily_salary = self.employee_daily_salary_repo.get_by_employee_id(employee_id)
+
+            if check_employee_daily_salary:
+                self.employee_daily_salary_repo.delete_employee_daily_salary_by_employee_id(employee_id)
+
+
+            check_daily_salary = self.daily_salary_repo.get_by_employee_id(employee_id)
+
+            if check_daily_salary:
+                self.daily_salary_repo.delete_daily_salary_by_employee_id(employee_id)
+
+            check_application = self.application_repo.get_by_employee_id(employee_id)
+
+            if check_application:
+                self.application_repo.delete_application_by_employee_id(employee_id)
 
             # Generate ID transaksi unik
             trx_id = uuid.uuid4()

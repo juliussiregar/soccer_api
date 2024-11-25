@@ -14,7 +14,7 @@ class EmployeeFilter(BaseModel):
     company_id: Optional[uuid.UUID] = None
 
 class CreateNewEmployee(BaseModel):
-    company_id: Optional[uuid.UUID] = None
+    company_id: Optional[str] = None
     position_id: int
     user_name: str
     nik: str

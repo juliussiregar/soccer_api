@@ -1,29 +1,43 @@
 from datetime import datetime, date
 from typing import List, Optional, Tuple
 import uuid
+
+from fastapi import Query
 from sqlalchemy.orm import joinedload
-from sqlalchemy import extract
+from sqlalchemy import extract, or_
 
 from app.core.database import get_session
 from app.models.attendance import Attendance
-from app.schemas.attendance_mgt import CreateCheckIn, UpdateCheckOut, CreateAttendance, UpdateAttendance
+from app.models.employee import Employee
+from app.schemas.attendance_mgt import CreateCheckIn, UpdateCheckOut, CreateAttendance, UpdateAttendance, \
+    AttendanceFilter
 from app.utils.date import get_now
 
 class AttendanceRepository:
 
-    def get_all_filtered(self, filter_date: date) -> List[Attendance]:
+    def filtered(self, query: Query, filter: AttendanceFilter) -> Query:
+        if filter.search:
+            query = query.join(Attendance.employee).filter(Employee.user_name.contains(filter.search))
+        if filter.company_id:
+            query = query.filter(Attendance.company_id == filter.company_id)
+        return query
+
+    def get_all_filtered(self, filter: AttendanceFilter) -> List[Attendance]:
         with get_session() as db:
-            return (
-                db.query(Attendance)
-                .options(joinedload(Attendance.employee), joinedload(Attendance.company))
-                .filter(
-                    extract('month', Attendance.created_at) == filter_date.month,
-                    extract('year', Attendance.created_at) == filter_date.year,
-                    extract('day', Attendance.created_at) == filter_date.day
-                )
-                .order_by(Attendance.created_at.desc())
-                .all()
-            )
+            query = db.query(Attendance).options(joinedload(Attendance.employee), joinedload(Attendance.company))
+            query = self.filtered(query, filter).order_by(Attendance.created_at.desc())
+            if filter.limit:
+                query = query.limit(filter.limit)
+            if filter.page and filter.limit:
+                offset = (filter.page - 1) * filter.limit
+                query = query.offset(offset)
+            return query.all()
+
+    def count_by_filter(self, filter: AttendanceFilter) -> int:
+        with get_session() as db:
+            query = db.query(Attendance)
+            query = self.filtered(query, filter)
+            return query.count()
 
     def insert_attendance(self, payload: CreateAttendance) -> Attendance:
         attendance = Attendance(
@@ -96,6 +110,13 @@ class AttendanceRepository:
 
         return attendance
 
+    def delete_attendance_by_employee_id(self, employee_id: uuid.UUID) -> Optional[Attendance]:
+        with get_session() as db:
+            attendance = db.query(Attendance).filter(Attendance.employee_id == employee_id).delete()
+            db.commit()
+
+        return attendance
+
     def get_all_attendances(
             self, company_id: Optional[uuid.UUID], limit: int, page: int
     ) -> Tuple[List[Attendance], int, int]:
@@ -126,56 +147,70 @@ class AttendanceRepository:
         with get_session() as db:
             return db.query(Attendance).filter(Attendance.company_id == company_id).count()
 
-    def get_all_by_date(self, filter_date: date, limit: int, offset: int) -> List[Attendance]:
+    def get_attendances_by_date(
+            self, filter_date: date, company_id: Optional[uuid.UUID], search: Optional[str]
+    ) -> Tuple[List[Attendance], int, int]:
+        """Retrieve attendances filtered by specific date, optional company_id, and search query."""
         with get_session() as db:
-            return (
-                db.query(Attendance)
-                .filter(
-                    extract('month', Attendance.created_at) == filter_date.month,
-                    extract('year', Attendance.created_at) == filter_date.year,
-                    extract('day', Attendance.created_at) == filter_date.day
-                )
-                .order_by(Attendance.created_at.desc())
-                .limit(limit)
-                .offset(offset)
-                .all()
+            query = db.query(Attendance).options(
+                joinedload(Attendance.employee), joinedload(Attendance.company)
             )
 
-    def count_attendances_by_date(self, filter_date: date) -> int:
-        with get_session() as db:
-            return (
-                db.query(Attendance)
-                .filter(
-                    extract('month', Attendance.created_at) == filter_date.month,
-                    extract('year', Attendance.created_at) == filter_date.year,
-                    extract('day', Attendance.created_at) == filter_date.day
-                )
-                .count()
+            if company_id:
+                query = query.filter(Attendance.company_id == company_id)
+
+            query = query.filter(
+                extract('year', Attendance.created_at) == filter_date.year,
+                extract('month', Attendance.created_at) == filter_date.month,
+                extract('day', Attendance.created_at) == filter_date.day
             )
 
-    def get_all_by_month(self, month: int, year: int, limit: int, offset: int) -> List[Attendance]:
-        with get_session() as db:
-            return (
-                db.query(Attendance)
-                .filter(
-                    extract('month', Attendance.created_at) == month,
-                    extract('year', Attendance.created_at) == year
+            if search:
+                search_filter = f"%{search}%"
+                query = query.filter(
+                    or_(
+                        Attendance.employee.has(Employee.user_name.ilike(search_filter)),
+                        Attendance.description.ilike(search_filter),
+                    )
                 )
-                .limit(limit)
-                .offset(offset)
-                .all()
+
+            total_records = query.count()
+            query = query.order_by(Attendance.created_at.desc()).all()
+
+        total_pages = 1  # Default 1 page as there is no pagination
+        return query, total_records, total_pages
+
+    def get_attendances_by_month(
+            self, year: int, month: int, company_id: Optional[uuid.UUID], limit: int, page: int, search: Optional[str]
+    ) -> Tuple[List[Attendance], int, int]:
+        """Retrieve attendances filtered by year, month, optional company_id, and search query."""
+        with get_session() as db:
+            query = db.query(Attendance).options(
+                joinedload(Attendance.employee), joinedload(Attendance.company)
             )
 
-    def count_attendances_by_month(self, month: int, year: int) -> int:
-        with get_session() as db:
-            return (
-                db.query(Attendance)
-                .filter(
-                    extract('month', Attendance.created_at) == month,
-                    extract('year', Attendance.created_at) == year
-                )
-                .count()
+            if company_id:
+                query = query.filter(Attendance.company_id == company_id)
+
+            query = query.filter(
+                extract('year', Attendance.created_at) == year,
+                extract('month', Attendance.created_at) == month
             )
+
+            if search:
+                search_filter = f"%{search}%"
+                query = query.filter(
+                    or_(
+                        Attendance.employee.has(Employee.user_name.ilike(search_filter)),
+                        Attendance.description.ilike(search_filter),
+                    )
+                )
+
+            total_records = query.count()
+            total_pages = (total_records + limit - 1) // limit
+            query = query.order_by(Attendance.created_at.desc()).limit(limit).offset((page - 1) * limit).all()
+
+        return query, total_records, total_pages
 
     def insert_attendance_checkin(self, payload: CreateCheckIn) -> Attendance:
         attendance = Attendance(
@@ -228,45 +263,3 @@ class AttendanceRepository:
                 )
                 .first()
             )
-
-    def get_attendances_by_date(
-            self, filter_date: date, company_id: Optional[uuid.UUID]
-    ) -> Tuple[List[Attendance], int, int]:
-        """Retrieve attendances filtered by specific date and optional company_id."""
-        with get_session() as db:
-            query = db.query(Attendance).options(joinedload(Attendance.employee), joinedload(Attendance.company))
-
-            if company_id:
-                query = query.filter(Attendance.company_id == company_id)
-
-            query = query.filter(
-                extract('year', Attendance.created_at) == filter_date.year,
-                extract('month', Attendance.created_at) == filter_date.month,
-                extract('day', Attendance.created_at) == filter_date.day
-            )
-
-            total_records = query.count()
-            query = query.order_by(Attendance.created_at.desc()).all()
-
-        return query, total_records, 1  # By-date filtering doesn't need pagination
-
-    def get_attendances_by_month(
-            self, year: int, month: int, company_id: Optional[uuid.UUID], limit: int, page: int
-    ) -> Tuple[List[Attendance], int, int]:
-        """Retrieve attendances filtered by year, month, and optional company_id."""
-        with get_session() as db:
-            query = db.query(Attendance).options(joinedload(Attendance.employee), joinedload(Attendance.company))
-
-            if company_id:
-                query = query.filter(Attendance.company_id == company_id)
-
-            query = query.filter(
-                extract('year', Attendance.created_at) == year,
-                extract('month', Attendance.created_at) == month
-            )
-
-            total_records = query.count()
-            total_pages = (total_records + limit - 1) // limit
-            query = query.order_by(Attendance.created_at.desc()).limit(limit).offset((page - 1) * limit).all()
-
-        return query, total_records, total_pages

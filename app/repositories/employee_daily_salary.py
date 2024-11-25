@@ -78,6 +78,13 @@ class EmployeeDailySalaryRepository:
                 db.commit()
             return employee_daily_salary
 
+    def delete_employee_daily_salary_by_employee_id(self, employee_id: uuid.UUID) -> Optional[EmployeeDailySalary]:
+        with get_session() as db:
+            employee_daily_salary = db.query(EmployeeDailySalary).filter(EmployeeDailySalary.employee_id == employee_id).delete()
+            db.commit()
+
+        return employee_daily_salary
+
     # Ambil Employee Daily Salary berdasarkan employee_id
     def get_by_employee_id(self, employee_id: uuid.UUID) -> Optional[EmployeeDailySalary]:
         with get_session() as db:

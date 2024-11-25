@@ -27,7 +27,7 @@ from app.repositories.employee import EmployeeRepository
 from app.repositories.employee_daily_salary import EmployeeDailySalaryRepository
 from app.repositories.face import FaceRepository
 from app.schemas.attendance_mgt import CreateCheckIn, UpdateCheckOut, IdentifyEmployee, CreateAttendance, \
-    UpdateAttendance
+    UpdateAttendance, AttendanceFilter, AttendanceData
 from app.repositories.attendance import AttendanceRepository
 from app.schemas.employee_daily_salary import CreateNewEmployeeDailySalary
 from app.schemas.faceapi_mgt import IdentifyFace
@@ -112,28 +112,36 @@ class AttendanceService:
             logger.error(str(err))
             raise InternalErrorException("Failed to delete attendance.")
 
-    def list_attendances(
-            self, company_id: Optional[uuid.UUID], limit: int, page: int
-    ) -> Tuple[List[dict], int, int]:
-        try:
-            return self.attendance_repo.get_all_attendances(company_id, limit, page)
-        except Exception as err:
-            logger.error(str(err))
-            raise InternalErrorException("Failed to list attendances.")
+    # def list_attendances(
+    #         self, company_id: Optional[uuid.UUID], limit: int, page: int
+    # ) -> Tuple[List[dict], int, int]:
+    #     try:
+    #         return self.attendance_repo.get_all_attendances(company_id, limit, page)
+    #     except Exception as err:
+    #         logger.error(str(err))
+    #         raise InternalErrorException("Failed to list attendances.")
 
-    def list_attendances_by_date(self, filter_date: date, company_id: Optional[uuid.UUID]):
-        """Retrieve attendances filtered by date and optional company_id."""
+    def list_attendances(self, filter: AttendanceFilter) -> Tuple[List[AttendanceData], int, int]:
+        attendances = self.attendance_repo.get_all_filtered(filter)
+        total_rows = self.attendance_repo.count_by_filter(filter)
+        total_pages = (total_rows + filter.limit - 1) // filter.limit if filter.limit else 1
+        return attendances, total_rows, total_pages
+
+    def list_attendances_by_date(
+            self, filter_date: date, company_id: Optional[uuid.UUID], search: Optional[str]
+    ):
+        """Retrieve attendances filtered by date, optional company_id, and search query."""
         attendances, total_records, total_pages = self.attendance_repo.get_attendances_by_date(
-            filter_date, company_id
+            filter_date, company_id, search
         )
         return attendances, total_records, total_pages
 
     def list_attendances_by_month(
-        self, year: int, month: int, company_id: Optional[uuid.UUID], limit: int, page: int
+            self, year: int, month: int, company_id: Optional[uuid.UUID], limit: int, page: int, search: Optional[str]
     ):
-        """Retrieve attendances filtered by month, year, and optional company_id."""
+        """Retrieve attendances filtered by month, year, optional company_id, and search query."""
         attendances, total_records, total_pages = self.attendance_repo.get_attendances_by_month(
-            year, month, company_id, limit, page
+            year, month, company_id, limit, page, search
         )
         return attendances, total_records, total_pages
 
@@ -438,7 +446,7 @@ class AttendanceService:
             # Check if the identified user ID matches an existing employee
             check_employee = self.employee_repo.is_nik_used(user_id)
             if not check_employee:
-                raise UnprocessableException("VISITOR NOT VALID")
+                raise UnprocessableException("EMPLOYEE NOT VALID")
 
             employee = self.employee_repo.get_employee_bynik(user_id)
 

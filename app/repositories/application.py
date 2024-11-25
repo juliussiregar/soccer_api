@@ -72,3 +72,14 @@ class ApplicationRepository:
                 db.delete(application)
                 db.commit()
             return application
+
+    def get_by_employee_id(self, employee_id: uuid.UUID) -> Optional[Application]:
+        with get_session() as db:
+            return db.query(Application).filter(Application.employee_id == employee_id).first()
+
+    def delete_application_by_employee_id(self, employee_id: uuid.UUID) -> Optional[Application]:
+        with get_session() as db:
+            application = db.query(Application).filter(Application.employee_id == employee_id).delete()
+            db.commit()
+
+        return application

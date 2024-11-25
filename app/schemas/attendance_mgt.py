@@ -17,6 +17,12 @@ def current_jakarta_time() -> datetime:
 def current_jakarta_time_example() -> str:
     return datetime.now(jakarta_timezone).strftime("%Y-%m-%dT%H:%M:%S")
 
+class AttendanceFilter(BaseModel):
+    limit: Optional[int] = None
+    page: Optional[int] = None
+    search: Optional[str] = None
+    company_id: Optional[uuid.UUID] = None
+
 # Create Schema for Check-In
 class CreateCheckIn(BaseModel):
     company_id: uuid.UUID
