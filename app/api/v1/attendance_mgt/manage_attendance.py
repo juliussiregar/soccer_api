@@ -9,10 +9,12 @@ from app.core.constants.auth import ROLE_ADMIN, ROLE_HR
 from app.schemas.attendance_mgt import IdentifyEmployee, UpdateAttendance, CreateAttendance, AttendanceFilter
 from app.services.attendance import AttendanceService
 from app.middleware.jwt import jwt_middleware, AuthUser
+from app.services.face_recognition import FaceRecognitionService
 from app.utils.logger import logger
 
 router = APIRouter()
 attendance_service = AttendanceService()
+face_recognition_service = FaceRecognitionService()
 
 
 @router.post('/attendances', description="Create a new attendance entry")
@@ -261,6 +263,9 @@ def identify_face(
         request_body: IdentifyEmployee,
         auth_user: Annotated[AuthUser, Depends(jwt_middleware)]
 ):
+    if not auth_user.roles or (ROLE_ADMIN not in auth_user.roles and ROLE_HR not in auth_user.roles):
+        raise HTTPException(status_code=403, detail="Access denied: Only ADMIN and HR roles can access this data.")
+
     try:
         logger.info("Attempting to create attendance (check-in or check-out) via Local method...")
 
@@ -275,7 +280,8 @@ def identify_face(
                 'userName': employee_info.get('user_name', ''),
                 'companyID': employee_info.get('company_id', ''),
                 'companyName': employee_info.get('company_name', ''),
-                'action': employee_info.get('action')
+                'action': employee_info.get('action'),
+                'timestamp': employee_info.get('timestamp')
             },
             'message': f"Employee is Valid by Local. {employee_info.get('action')} successful",
             'code': 200
@@ -303,7 +309,8 @@ def identify_face(
                         'fullName': employee_info.get('user_name', ''),
                         'companyID': employee_info.get('company_id', ''),
                         'companyName': employee_info.get('company_name', ''),
-                        'action': employee_info.get('action')
+                        'action': employee_info.get('action'),
+                        'timestamp': employee_info.get('timestamp')
                     },
                     'message': f"Employee is Valid by RisetAI. {employee_info.get('action')} successful",
                     'code': 200,
@@ -320,6 +327,37 @@ def identify_face(
 
     except Exception as e:
         logger.error(f"Unexpected error in identify_face: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"An unexpected error occurred: {str(e)}"
+        )
+
+@router.post('/detect-face', description="Detect face and return matched employee details")
+def detect_face(
+        request_body: IdentifyEmployee,
+        auth_user: Annotated[AuthUser, Depends(jwt_middleware)]
+):
+    if not auth_user.roles or (ROLE_ADMIN not in auth_user.roles and ROLE_HR not in auth_user.roles):
+        raise HTTPException(status_code=403, detail="Access denied: Only ADMIN and HR roles can access this data.")
+
+    try:
+        logger.info("Starting face detection process...")
+        employee_info = face_recognition_service.detect_face(request_body)
+
+        logger.info("Face successfully detected and matched.")
+        return {
+            'success': True,
+            'data': employee_info,
+            'message': "Face successfully detected and matched.",
+            'code': 200
+        }
+
+    except HTTPException as e:
+        logger.error(f"Face detection failed: {str(e)}")
+        raise e
+
+    except Exception as e:
+        logger.error(f"Unexpected error in detect_face: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail=f"An unexpected error occurred: {str(e)}"

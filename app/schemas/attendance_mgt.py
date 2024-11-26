@@ -77,7 +77,7 @@ class UpdateAttendance(BaseModel):
 # Schema for Identifying an Employee via Face
 class IdentifyEmployee(BaseModel):
     image: str
-    company_name: Optional[str] = None
+    company_id: Optional[str] = None
     location: Optional[str] = None
 
 # Schema for Creating a New Attendance Entry (Generalized)

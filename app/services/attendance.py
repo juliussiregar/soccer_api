@@ -3,7 +3,7 @@ from decimal import Decimal, ROUND_DOWN
 from io import BytesIO
 from math import ceil
 from typing import List, Tuple, Optional
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, time
 
 import face_recognition
 import numpy as np
@@ -16,11 +16,7 @@ from sqlalchemy import Row
 
 from app.clients.face_api import FaceApiClient
 from app.core.constants.app import DEFAULT_TZ
-from app.core.constants.information import CLIENT_NAME
 from app.models.attendance import Attendance
-from app.models.employee import Employee
-from app.models.employee_daily_salary import EmployeeDailySalary
-from app.models.face import Face
 from app.repositories.company import CompanyRepository
 from app.repositories.daily_salary import DailySalaryRepository
 from app.repositories.employee import EmployeeRepository
@@ -32,7 +28,7 @@ from app.repositories.attendance import AttendanceRepository
 from app.schemas.employee_daily_salary import CreateNewEmployeeDailySalary
 from app.schemas.faceapi_mgt import IdentifyFace
 from app.services.employee import EmployeeService
-from app.utils.date import get_now
+from app.services.face_recognition import FaceRecognitionService
 from app.utils.exception import InternalErrorException, UnprocessableException
 from app.utils.logger import logger
 
@@ -55,37 +51,7 @@ class AttendanceService:
         self.employee_daily_salary_repo = EmployeeDailySalaryRepository()
 
         self.employee_service = EmployeeService()
-
-    def process_base64_image(self, base64_string: str) -> np.ndarray:
-        """Convert base64 string to numpy array in RGB format."""
-        try:
-            # Remove potential data URI prefix
-            if 'base64,' in base64_string:
-                base64_string = base64_string.split('base64,')[1]
-
-            img_data = base64.b64decode(base64_string)
-            img = Image.open(BytesIO(img_data)).convert('RGB')
-            return np.array(img)
-        except Exception as e:
-            logger.error(f"Error processing base64 image: {str(e)}")
-            raise HTTPException(status_code=400, detail=f"Invalid image format: {str(e)}")
-
-    def get_face_encoding(self, img_array: np.ndarray) -> np.ndarray:
-        """Generate face encoding from an RGB image array."""
-        face_locations = face_recognition.face_locations(img_array)
-
-        if not face_locations:
-            raise HTTPException(status_code=400, detail="No face detected in the image")
-
-        return face_recognition.face_encodings(img_array, face_locations)[0]
-
-    def row_to_dict(self, row: Row) -> dict:
-        """Convert SQLAlchemy Row to dictionary."""
-        try:
-            return {key: getattr(row, key) for key in row._fields}
-        except Exception as e:
-            logger.error(f"Error converting row to dict: {str(e)}")
-            return {}
+        self.face_recognition_service = FaceRecognitionService()
 
     def get_start_of_day(self, dt: datetime) -> datetime:
         """Helper function to get start of the current day in Asia/Jakarta timezone."""
@@ -111,15 +77,6 @@ class AttendanceService:
         except Exception as err:
             logger.error(str(err))
             raise InternalErrorException("Failed to delete attendance.")
-
-    # def list_attendances(
-    #         self, company_id: Optional[uuid.UUID], limit: int, page: int
-    # ) -> Tuple[List[dict], int, int]:
-    #     try:
-    #         return self.attendance_repo.get_all_attendances(company_id, limit, page)
-    #     except Exception as err:
-    #         logger.error(str(err))
-    #         raise InternalErrorException("Failed to list attendances.")
 
     def list_attendances(self, filter: AttendanceFilter) -> Tuple[List[AttendanceData], int, int]:
         attendances = self.attendance_repo.get_all_filtered(filter)
@@ -318,8 +275,8 @@ class AttendanceService:
 
         # Process the input image
         try:
-            input_image = self.process_base64_image(payload.image)
-            input_encoding = self.get_face_encoding(input_image)
+            input_image = self.face_recognition_service.process_base64_image(payload.image)
+            input_encoding = self.face_recognition_service.get_face_encoding(input_image)
             logger.info("Successfully processed input image and got face encoding")
         except Exception as e:
             logger.error(f"Error processing input image: {str(e)}")
@@ -339,7 +296,7 @@ class AttendanceService:
         for i, employee in enumerate(employees):
             logger.info(f"Processing employee {i + 1}/{len(employees)}")
 
-            employee_data = self.row_to_dict(employee)
+            employee_data = self.face_recognition_service.row_to_dict(employee)
             face_image = employee_data.get('photo') or employee_data.get('image_base64')
 
             if not face_image:
@@ -347,8 +304,8 @@ class AttendanceService:
                 continue
 
             try:
-                employee_img_array = self.process_base64_image(face_image)
-                employee_encoding = self.get_face_encoding(employee_img_array)
+                employee_img_array = self.face_recognition_service.process_base64_image(face_image)
+                employee_encoding = self.face_recognition_service.get_face_encoding(employee_img_array)
 
                 distance = face_recognition.face_distance([employee_encoding], input_encoding)[0]
                 logger.info(f"Face distance for employee {i + 1}: {distance}")
@@ -412,7 +369,8 @@ class AttendanceService:
                 'email': best_match.get('email', ''),
                 'company_id': company_id,
                 'company_name': company_name,
-                'action': action
+                'action': action,
+                'timestamp': datetime.now(jakarta_timezone).strftime('%Y-%m-%d %H:%M:%S')
             }
 
             logger.info(f"Successfully performed {action} for employee.")
@@ -486,7 +444,8 @@ class AttendanceService:
                 'nik': employee.nik,
                 'company_id': company.id,
                 'company_name': company.name,
-                'action': action
+                'action': action,
+                'timestamp': datetime.now(jakarta_timezone).strftime('%Y-%m-%d %H:%M:%S')
             }
 
             logger.info(f"Successfully performed {action} for employee via RisetAI.")
