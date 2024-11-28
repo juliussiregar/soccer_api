@@ -101,11 +101,26 @@ class FaceRecognitionService:
         best_match = self.process_employees(employees, input_encoding)
 
         if best_match:
+            employee_id = best_match.get('employee_id')
+
+            # Ambil data terakhir
+            last_attendance = self.attendance_repo.get_last_attendance_by_employee_id(employee_id)
+
+            # Default action adalah "Check-in"
+            action = "Check-in"
+
+            if last_attendance:
+                if last_attendance.check_in and not last_attendance.check_out:
+                    action = "Check-out"  # Jika sudah check-in tetapi belum check-out
+                elif last_attendance.check_in and last_attendance.check_out:
+                    action = "Check-in"  # Jika sudah check-in dan check-out
+
             return {
-                'id': best_match.get('employee_id'),
+                'id': employee_id,
                 'user_name': best_match.get('user_name', 'Unknown'),
                 'nik': best_match.get('nik', ''),
                 'company_id': best_match.get('company_id'),
+                'action': action
             }
 
         logger.warning("No matching face found")

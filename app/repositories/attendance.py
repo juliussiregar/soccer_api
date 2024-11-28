@@ -2,6 +2,7 @@ from datetime import datetime, date
 from typing import List, Optional, Tuple
 import uuid
 
+import pytz
 from fastapi import Query
 from sqlalchemy.orm import joinedload
 from sqlalchemy import extract, or_
@@ -283,3 +284,14 @@ class AttendanceRepository:
                 )
                 .first()
             )
+
+    def get_last_attendance_by_employee_id(self, employee_id: uuid.UUID) -> Optional[Attendance]:
+        """Get the most recent attendance record by employee_id."""
+        with get_session() as db:
+            last_attendance = (
+                db.query(Attendance)
+                .filter(Attendance.employee_id == employee_id)
+                .order_by(Attendance.check_in.desc(), Attendance.check_out.desc())
+                .first()
+            )
+            return last_attendance
