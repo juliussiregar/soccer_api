@@ -94,13 +94,29 @@ class AttendanceService:
         return attendances, total_records, total_pages
 
     def list_attendances_by_month(
-            self, year: int, month: int, company_id: Optional[uuid.UUID], limit: int, page: int, search: Optional[str]
+        self,
+        year: int,
+        month: int,
+        company_id: Optional[uuid.UUID],
+        employee_id: Optional[uuid.UUID],
+        limit: int,
+        page: int,
+        search: Optional[str]
     ):
-        """Retrieve attendances filtered by month, year, optional company_id, and search query."""
+        """
+        Retrieve attendances filtered by month, year, optional company_id, optional employee_id, and search query.
+        """
         attendances, total_records, total_pages = self.attendance_repo.get_attendances_by_month(
-            year, month, company_id, limit, page, search
+            year=year,
+            month=month,
+            company_id=company_id,
+            employee_id=employee_id,
+            limit=limit,
+            page=page,
+            search=search
         )
         return attendances, total_records, total_pages
+
 
     def list_attendances_by_company(self, company_id: Optional[uuid.UUID], limit: int, page: int) -> Tuple[
         List[Attendance], int, int]:

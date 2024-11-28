@@ -15,6 +15,13 @@ class CreateNewApplication(BaseModel):
     location: str
     status: Optional[Literal["Submitted", "Accepted", "Rejected"]] = "Submitted"
     description: str
+    
+class CreateWFHNewApplication(BaseModel):
+    employee_id: str
+    location: str
+    status: Optional[Literal["Submitted", "Accepted", "Rejected"]] = "Submitted"
+    description: str
+    token: Optional[str] = None
 
 class UpdateApplication(BaseModel):
     location: Optional[str] = None

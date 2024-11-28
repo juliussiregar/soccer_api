@@ -177,7 +177,7 @@ def get_attendance_by_date(
         },
     }
 
-@router.get('/attendances/by-month', description="Get attendances filtered by month and optional company_id")
+@router.get('/attendances/by-month', description="Get attendances filtered by month, employee_id, and optional company_id")
 def get_attendance_by_month(
     auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
     year: int = Query(
@@ -187,6 +187,10 @@ def get_attendance_by_month(
     month: int = Query(
         default=datetime.now().month,
         description="Filter attendances by month (default is current month)"
+    ),
+    employee_id: Optional[uuid.UUID] = Query(
+        default=None,
+        description="Filter attendances by employee_id (optional)"
     ),
     company_id: Optional[uuid.UUID] = Query(
         default=None,
@@ -202,10 +206,18 @@ def get_attendance_by_month(
     if not auth_user.roles or (ROLE_ADMIN not in auth_user.roles and ROLE_HR not in auth_user.roles):
         raise HTTPException(status_code=403, detail="Access denied: Only ADMIN and HR roles can access this data.")
 
+    # Pass employee_id and company_id into the service method
     attendances, total_records, total_pages = attendance_service.list_attendances_by_month(
-        year=year, month=month, company_id=company_id, limit=limit, page=page, search=search
+        year=year, 
+        month=month, 
+        employee_id=employee_id,
+        company_id=company_id, 
+        limit=limit, 
+        page=page, 
+        search=search
     )
 
+    # Construct the response
     return {
         "success": True,
         "data": [

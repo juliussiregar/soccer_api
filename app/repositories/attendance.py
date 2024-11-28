@@ -181,22 +181,38 @@ class AttendanceRepository:
         return query, total_records, total_pages
 
     def get_attendances_by_month(
-            self, year: int, month: int, company_id: Optional[uuid.UUID], limit: int, page: int, search: Optional[str]
+        self,
+        year: int,
+        month: int,
+        company_id: Optional[uuid.UUID],
+        employee_id: Optional[uuid.UUID],
+        limit: int,
+        page: int,
+        search: Optional[str]
     ) -> Tuple[List[Attendance], int, int]:
-        """Retrieve attendances filtered by year, month, optional company_id, and search query."""
+        """
+        Retrieve attendances filtered by year, month, optional company_id, employee_id, and search query.
+        """
         with get_session() as db:
             query = db.query(Attendance).options(
                 joinedload(Attendance.employee), joinedload(Attendance.company)
             )
 
+            # Filter by company_id if provided
             if company_id:
                 query = query.filter(Attendance.company_id == company_id)
 
+            # Filter by employee_id if provided
+            if employee_id:
+                query = query.filter(Attendance.employee_id == employee_id)
+
+            # Filter by year and month
             query = query.filter(
                 extract('year', Attendance.created_at) == year,
                 extract('month', Attendance.created_at) == month
             )
 
+            # Apply search filter if provided
             if search:
                 search_filter = f"%{search}%"
                 query = query.filter(
@@ -206,11 +222,15 @@ class AttendanceRepository:
                     )
                 )
 
+            # Get total records and calculate total pages
             total_records = query.count()
             total_pages = (total_records + limit - 1) // limit
-            query = query.order_by(Attendance.created_at.desc()).limit(limit).offset((page - 1) * limit).all()
 
-        return query, total_records, total_pages
+            # Apply ordering, pagination, and execute query
+            attendances = query.order_by(Attendance.created_at.desc()).limit(limit).offset((page - 1) * limit).all()
+
+        return attendances, total_records, total_pages
+
 
     def insert_attendance_checkin(self, payload: CreateCheckIn) -> Attendance:
         attendance = Attendance(
