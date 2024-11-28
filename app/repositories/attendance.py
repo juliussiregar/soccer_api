@@ -2,7 +2,6 @@ from datetime import datetime, date
 from typing import List, Optional, Tuple
 import uuid
 
-import pytz
 from fastapi import Query
 from sqlalchemy.orm import joinedload
 from sqlalchemy import extract, or_
@@ -52,8 +51,7 @@ class AttendanceRepository:
             type=payload.type,
             late=payload.late,
             overtime=payload.overtime,
-            description=payload.description,
-            created_at=get_now(),
+            description=payload.description
         )
 
         with get_session() as db:
@@ -295,3 +293,8 @@ class AttendanceRepository:
                 .first()
             )
             return last_attendance
+
+    def get_attendance_by_id(self, attendance_id: int) -> Optional[Attendance]:
+        with get_session() as db:
+            attendance = db.query(Attendance).filter(Attendance.id == attendance_id).options(joinedload(Attendance.employee), joinedload(Attendance.company)).first()
+        return attendance

@@ -282,7 +282,7 @@ def identify_face(
         logger.info("Attempting to create attendance (check-in or check-out) via Local method...")
 
         # First, attempt to create attendance using the Local method
-        attendance, employee_info = attendance_service.create(request_body)
+        attendance, employee_info = face_recognition_service.create(request_body)
 
         logger.info(f"Successfully completed {employee_info.get('action')} attendance via Local method.")
         return {
@@ -311,7 +311,7 @@ def identify_face(
                 user_company_id = uuid.UUID(auth_user.company_id)
 
                 # Attempt to identify the face via RisetAI and perform check-in/check-out
-                attendance, employee_info = attendance_service.identify_face_employee(request_body, user_company_id)
+                attendance, employee_info = face_recognition_service.identify_face_employee(request_body, user_company_id)
 
                 logger.info(f"Successfully completed {employee_info.get('action')} attendance via RisetAI.")
                 return {

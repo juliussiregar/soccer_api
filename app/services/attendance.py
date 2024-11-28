@@ -1,18 +1,10 @@
-import base64
-from decimal import Decimal, ROUND_DOWN
-from io import BytesIO
+import math
 from math import ceil
 from typing import List, Tuple, Optional
 from datetime import date, datetime, time
-
-import face_recognition
-import numpy as np
 import pytz
 import uuid
-
-from PIL import Image
 from fastapi import HTTPException
-from sqlalchemy import Row
 
 from app.clients.face_api import FaceApiClient
 from app.core.constants.app import DEFAULT_TZ
@@ -22,13 +14,12 @@ from app.repositories.daily_salary import DailySalaryRepository
 from app.repositories.employee import EmployeeRepository
 from app.repositories.employee_daily_salary import EmployeeDailySalaryRepository
 from app.repositories.face import FaceRepository
-from app.schemas.attendance_mgt import CreateCheckIn, UpdateCheckOut, IdentifyEmployee, CreateAttendance, \
+from app.schemas.attendance_mgt import CreateCheckIn, UpdateCheckOut, \
     UpdateAttendance, AttendanceFilter, AttendanceData
 from app.repositories.attendance import AttendanceRepository
 from app.schemas.employee_daily_salary import CreateNewEmployeeDailySalary
-from app.schemas.faceapi_mgt import IdentifyFace
 from app.services.employee import EmployeeService
-from app.services.face_recognition import FaceRecognitionService
+from app.utils.calculate_salary import CalculateSalary
 from app.utils.exception import InternalErrorException, UnprocessableException
 from app.utils.logger import logger
 
@@ -41,6 +32,7 @@ def get_start_of_day(dt: datetime) -> datetime:
 
 class AttendanceService:
     def __init__(self) -> None:
+        self.calculate_salary_utils = CalculateSalary()
         self.face_api_clients = FaceApiClient()
 
         self.employee_repo = EmployeeRepository()
@@ -51,15 +43,89 @@ class AttendanceService:
         self.employee_daily_salary_repo = EmployeeDailySalaryRepository()
 
         self.employee_service = EmployeeService()
-        self.face_recognition_service = FaceRecognitionService()
 
     def get_start_of_day(self, dt: datetime) -> datetime:
         """Helper function to get start of the current day in Asia/Jakarta timezone."""
         return dt.astimezone(jakarta_timezone).replace(hour=0, minute=0, second=0, microsecond=0)
 
-    def create_attendance(self, payload: CreateAttendance):
+    def create_attendance(self, payload):
         try:
-            return self.attendance_repo.insert_attendance(payload)
+            # Validasi apakah company ada
+            company = self.company_repo.get_company_by_id(payload.company_id)
+            if not company:
+                raise HTTPException(status_code=404, detail="Company not found")
+
+            # Validasi apakah employee ada di company tersebut
+            employee = self.employee_repo.get_employee_by_id(payload.employee_id)
+            if not employee or employee.company_id != payload.company_id:
+                raise HTTPException(status_code=404, detail="Employee not found in the specified company")
+
+            # Validasi waktu kerja
+            standard_start_time = company.start_time or time(9, 0)
+            standard_end_time = company.end_time or time(16, 0)
+
+            # Hitung keterlambatan
+            check_in_time = payload.check_in.time()
+            late_minutes = 0
+            if check_in_time > standard_start_time:
+                late_minutes = math.ceil((datetime.combine(date.today(), check_in_time) -
+                                          datetime.combine(date.today(), standard_start_time)).total_seconds() / 60)
+
+            # Hitung lembur
+            overtime_minutes = 0
+            if payload.check_out:
+                check_out_time = payload.check_out.astimezone(jakarta_timezone).time()
+                if check_out_time > standard_end_time:
+                    overtime_minutes = math.ceil((datetime.combine(date.today(), check_out_time) -
+                                                  datetime.combine(date.today(),
+                                                                   standard_end_time)).total_seconds() / 60)
+
+            # Konversi keterlambatan dan lembur ke jam dan menit
+            late_hours = late_minutes // 60
+            late_remaining_minutes = late_minutes % 60
+            overtime_hours = overtime_minutes // 60
+            overtime_remaining_minutes = overtime_minutes % 60
+
+            # Buat deskripsi
+            description = (
+                f"Checked in with {late_hours} hours {late_remaining_minutes} minutes late and "
+                f"Checked out with {overtime_hours} hours {overtime_remaining_minutes} minutes overtime."
+            )
+            logger.info(f"Description: {description}")
+
+            # Update payload
+            payload.late = late_minutes
+            payload.overtime = overtime_minutes
+            payload.description = description
+
+            # Insert attendance
+            new_attendance = self.attendance_repo.insert_attendance(payload)
+
+            # Perhitungan salary jika ada data salary harian
+            daily_salary = self.daily_salary_repo.get_by_employee_id(payload.employee_id)
+            if daily_salary:
+                salary_data = self.calculate_salary_utils.calculate_daily_salary(
+                    new_attendance, daily_salary, late_minutes, overtime_minutes
+                )
+
+                # Buat payload salary
+                new_salary_payload = CreateNewEmployeeDailySalary(
+                    employee_id=payload.employee_id,
+                    work_date=new_attendance.check_in.date(),
+                    hours_worked=round(salary_data["hours_worked"], 2),
+                    late_deduction=round(salary_data["late_deduction"], 2),
+                    overtime_pay=round(salary_data["overtime_pay"], 2),
+                    month=new_attendance.check_in.month,
+                    year=new_attendance.check_in.year,
+                    normal_salary=round(salary_data["normal_salary"], 2),
+                    total_salary=round(salary_data["total_salary"], 2),
+                )
+
+                # Masukkan data salary
+                self.employee_daily_salary_repo.insert(new_salary_payload)
+                logger.info("Inserted new salary data for create_attendance.")
+
+            return new_attendance
         except Exception as err:
             logger.error(str(err))
             raise InternalErrorException("Failed to create attendance.")
@@ -73,7 +139,29 @@ class AttendanceService:
 
     def delete_attendance(self, attendance_id: int):
         try:
+            # Cek apakah attendance dengan ID diberikan ada
+            check_employee_id_by_attendance_id = self.attendance_repo.get_attendance_by_id(attendance_id)
+
+            if not check_employee_id_by_attendance_id:
+                # logger.error(f"Attendance with ID {attendance_id} not found.")
+                raise HTTPException(status_code=404, detail=f"Attendance with ID {attendance_id} not found.")
+
+            # Ambil employee_id dari attendance
+            employee_id = check_employee_id_by_attendance_id.employee_id
+
+            # logger.info(f"Attendance found: {check_employee_id_by_attendance_id}")
+            # logger.info(f"Employee ID: {employee_id}")
+
+            # Cek apakah ada data gaji harian terkait employee ini
+            check_employee_daily_salary = self.employee_daily_salary_repo.get_by_employee_id(employee_id)
+
+            if check_employee_daily_salary:
+                self.employee_daily_salary_repo.delete_employee_daily_salary_by_employee_id(employee_id)
+
+            # Hapus attendance
             return self.attendance_repo.delete_attendance(attendance_id)
+        except HTTPException as http_err:
+            raise http_err
         except Exception as err:
             logger.error(str(err))
             raise InternalErrorException("Failed to delete attendance.")
@@ -193,8 +281,8 @@ class AttendanceService:
 
         # Buat deskripsi
         description = (
-            f"Checked out with {late_hours} hours {late_remaining_minutes} minutes late and "
-            f"{overtime_hours} hours {overtime_remaining_minutes} minutes overtime."
+            f"Checked in with {late_hours} hours {late_remaining_minutes} minutes late and "
+            f"Checked out with {overtime_hours} hours {overtime_remaining_minutes} minutes overtime."
         )
         logger.info(f"Description: {description}")
 
@@ -205,69 +293,26 @@ class AttendanceService:
                 payload, late_minutes, overtime_minutes, description
             )
 
-            # Calculate Daily Salary
+            # Periksa apakah ada data gaji harian
             daily_salary = self.daily_salary_repo.get_by_employee_id(payload.employee_id)
             if daily_salary:
-                hours_worked = Decimal(
-                    (updated_attendance.check_out - updated_attendance.check_in).total_seconds() / 3600
-                ).quantize(Decimal('0.01'))
-                # hours_worked = Decimal(7)
+                salary_data = self.calculate_salary_utils.calculate_daily_salary(updated_attendance, daily_salary, late_minutes,
+                                                          overtime_minutes)
 
-                # Normal salary calculation
-                normal_salary = Decimal(daily_salary.standard_hours) * Decimal(daily_salary.hours_rate)
-
-                # Overtime calculation
-                overtime_pay = Decimal(0)
-                if overtime_minutes > daily_salary.min_overtime:  # Min overtime in minutes
-                    overtime_pay = Decimal(overtime_hours) * Decimal(daily_salary.overtime_rate)
-
-                # Late deduction calculation
-                late_deduction = Decimal(0)
-                if late_minutes > daily_salary.max_late:  # Deduction applies only if late exceeds max_late
-                    excess_late_minutes = late_minutes - daily_salary.max_late  # Calculate excess late minutes
-                    excess_late_hours = Decimal(excess_late_minutes) // Decimal(60)  # Hours
-                    remaining_late_minutes = Decimal(excess_late_minutes) % Decimal(60)  # Remaining minutes
-                    total_excess_hours = excess_late_hours + (
-                                remaining_late_minutes / Decimal(60))  # Total excess hours
-                    late_deduction = (total_excess_hours * Decimal(daily_salary.late_deduction_rate)).quantize(
-                        Decimal('0.01'), rounding=ROUND_DOWN
-                    )
-
-                logger.info(f"Late minutes: {late_minutes}")
-                logger.info(
-                    f"Excess late minutes: {excess_late_minutes if late_minutes > daily_salary.max_late else 0}")
-                logger.info(f"Excess late hours: {total_excess_hours if late_minutes > daily_salary.max_late else 0}")
-                logger.info(f"Late deduction: {late_deduction}")
-
-                # Adjusted salary
-                adjusted_salary = (hours_worked * Decimal(daily_salary.hours_rate)).quantize(Decimal('0.01'))
-
-                # Total salary calculation
-                total_salary = (adjusted_salary + overtime_pay - late_deduction).quantize(Decimal('0.01'))
-
-                # Logging for debugging
-                logger.info(f"Hours worked: {hours_worked}")
-                logger.info(f"Normal salary: {normal_salary}")
-                logger.info(f"Overtime pay: {overtime_pay}")
-                logger.info(f"Late deduction: {late_deduction}")
-                logger.info(f"Adjusted salary: {adjusted_salary}")
-                logger.info(f"Total salary: {total_salary}")
-
-                # Payload untuk gaji harian
+                # Buat payload untuk data gaji harian
                 new_salary_payload = CreateNewEmployeeDailySalary(
                     employee_id=payload.employee_id,
                     work_date=today_start.date(),
-                    hours_worked=Decimal(hours_worked),
-                    late_deduction=Decimal(late_deduction),
-                    overtime_pay=Decimal(overtime_pay),
+                    hours_worked=salary_data["hours_worked"],
+                    late_deduction=salary_data["late_deduction"],
+                    overtime_pay=salary_data["overtime_pay"],
                     month=today_start.month,
                     year=today_start.year,
-                    normal_salary=Decimal(normal_salary),
-                    total_salary=Decimal(total_salary),
+                    normal_salary=salary_data["normal_salary"],
+                    total_salary=salary_data["total_salary"],
                 )
-                logger.info(f"New salary payload: {new_salary_payload}")
 
-                # Periksa apakah data gaji sudah ada
+                # Cek jika data gaji sudah ada, jika belum masukkan data baru
                 existing_salary = self.employee_daily_salary_repo.get_by_employee_id_and_date(
                     payload.employee_id, today_start.date()
                 )
@@ -282,194 +327,3 @@ class AttendanceService:
             raise InternalErrorException("Failed to update check-out or calculate daily salary.")
 
         return updated_attendance
-
-    def create(self, payload: IdentifyEmployee) -> Tuple[Attendance, dict]:
-        if not payload.image:
-            raise HTTPException(status_code=400, detail="Image is required")
-
-        logger.info("Starting face identification process")
-
-        # Process the input image
-        try:
-            input_image = self.face_recognition_service.process_base64_image(payload.image)
-            input_encoding = self.face_recognition_service.get_face_encoding(input_image)
-            logger.info("Successfully processed input image and got face encoding")
-        except Exception as e:
-            logger.error(f"Error processing input image: {str(e)}")
-            raise HTTPException(status_code=400, detail=f"Error processing input image: {str(e)}")
-
-        # Retrieve all employees from the database for comparison
-        employees = self.face_repo.get_all_faces_with_employees()
-        if not employees:
-            logger.warning("No employees found in database")
-            raise HTTPException(status_code=404, detail="No employees found in database")
-
-        logger.info(f"Found {len(employees)} employees in database")
-
-        best_match = None
-        min_distance = 1.0
-
-        for i, employee in enumerate(employees):
-            logger.info(f"Processing employee {i + 1}/{len(employees)}")
-
-            employee_data = self.face_recognition_service.row_to_dict(employee)
-            face_image = employee_data.get('photo') or employee_data.get('image_base64')
-
-            if not face_image:
-                logger.warning(f"No face image found for employee {employee_data.get('employee_id', 'unknown')}")
-                continue
-
-            try:
-                employee_img_array = self.face_recognition_service.process_base64_image(face_image)
-                employee_encoding = self.face_recognition_service.get_face_encoding(employee_img_array)
-
-                distance = face_recognition.face_distance([employee_encoding], input_encoding)[0]
-                logger.info(f"Face distance for employee {i + 1}: {distance}")
-
-                if distance < min_distance and distance < 0.5:
-                    min_distance = distance
-                    best_match = employee_data
-                    logger.info(f"New best match found with distance: {distance}")
-            except Exception as e:
-                logger.warning(f"Error processing employee image: {str(e)}")
-                continue
-
-        if best_match:
-            logger.info(f"Best match found with distance: {min_distance}")
-
-            employee_id = best_match.get('employee_id')
-            user_name = best_match.get('user_name', 'Unknown')
-            company_id = best_match.get('company_id')
-            company_name = self.company_repo.get_company_name_by_id(company_id)
-
-            if not employee_id:
-                logger.error("Invalid employee data: missing employee_id")
-                raise HTTPException(
-                    status_code=500,
-                    detail="Invalid employee data: missing employee_id"
-                )
-
-            # Check for existing attendance for today
-            today_start = datetime.now(jakarta_timezone).replace(hour=0, minute=0, second=0, microsecond=0)
-            existing_attendance = self.attendance_repo.existing_attendance(employee_id, today_start)
-
-            if existing_attendance:
-                # Perform check-out if there is an existing attendance
-                check_out_time = datetime.now(jakarta_timezone)
-                update_payload = UpdateCheckOut(
-                    company_id=company_id,
-                    employee_id=employee_id,
-                    check_out=check_out_time,
-                    photo_out=payload.image,
-                    location=payload.location
-                )
-                updated_attendance = self.update_check_out(update_payload)
-                action = "Check-out"
-            else:
-                # Perform check-in if no existing attendance
-                check_in_time = datetime.now(jakarta_timezone)
-                check_in_payload = CreateCheckIn(
-                    company_id=company_id,
-                    employee_id=employee_id,
-                    check_in=check_in_time,
-                    photo_in=payload.image,
-                    location=payload.location
-                )
-                updated_attendance = self.create_check_in(check_in_payload)
-                action = "Check-in"
-
-            employee_response = {
-                'id': employee_id,
-                'user_name': user_name,
-                'nik': best_match.get('nik', ''),
-                'email': best_match.get('email', ''),
-                'company_id': company_id,
-                'company_name': company_name,
-                'action': action,
-                'timestamp': datetime.now(jakarta_timezone).strftime('%Y-%m-%d %H:%M:%S')
-            }
-
-            logger.info(f"Successfully performed {action} for employee.")
-            return updated_attendance, employee_response
-
-        logger.warning("No matching face found")
-        raise HTTPException(status_code=404, detail="No matching face found")
-
-    def identify_face_employee(self, payload: IdentifyEmployee, user_company_id: uuid.UUID) -> Tuple[Attendance, dict]:
-        if user_company_id is None:
-            raise UnprocessableException("Company ID is required but not provided.")
-
-        try:
-            # Retrieve the company to verify it exists and is accessible
-            company = self.company_repo.get_company_by_id(user_company_id)
-            if not company:
-                raise UnprocessableException("Company not found.")
-
-            # Perform face identification via RisetAI
-            trx_id = uuid.uuid4()
-            identify = IdentifyFace(
-                facegallery_id=str(company.id),
-                image=payload.image,
-                trx_id=str(trx_id)
-            )
-
-            # Call the face API client to identify the face
-            url, data = self.face_api_clients.identify_face_employee(identify)
-            user_id = data[0].get("user_id")
-
-            # Check if the identified user ID matches an existing employee
-            check_employee = self.employee_repo.is_nik_used(user_id)
-            if not check_employee:
-                raise UnprocessableException("EMPLOYEE NOT VALID")
-
-            employee = self.employee_repo.get_employee_bynik(user_id)
-
-            # Check for existing attendance for today
-            today_start = datetime.now(jakarta_timezone).replace(hour=0, minute=0, second=0, microsecond=0)
-            existing_attendance = self.attendance_repo.existing_attendance(employee.id, today_start)
-
-            if existing_attendance:
-                # Perform check-out if there is an existing attendance
-                check_out_time = datetime.now(jakarta_timezone)
-                update_payload = UpdateCheckOut(
-                    company_id=company.id,
-                    employee_id=employee.id,
-                    check_out=check_out_time,
-                    photo_out=payload.image,
-                    location=payload.location
-                )
-                updated_attendance = self.update_check_out(update_payload)
-                action = "Check-out"
-            else:
-                # Perform check-in if no existing attendance
-                check_in_time = datetime.now(jakarta_timezone)
-                check_in_payload = CreateCheckIn(
-                    company_id=company.id,
-                    employee_id=employee.id,
-                    check_in=check_in_time,
-                    photo_in=payload.image,
-                    location=payload.location
-                )
-                updated_attendance = self.create_check_in(check_in_payload)
-                action = "Check-in"
-
-            # Prepare employee response data
-            employee_response = {
-                'id': employee.id,
-                'user_name': employee.user_name,
-                'nik': employee.nik,
-                'company_id': company.id,
-                'company_name': company.name,
-                'action': action,
-                'timestamp': datetime.now(jakarta_timezone).strftime('%Y-%m-%d %H:%M:%S')
-            }
-
-            logger.info(f"Successfully performed {action} for employee via RisetAI.")
-            return updated_attendance, employee_response
-
-        except Exception as err:
-            err_msg = str(err)
-            logger.error(f"Error in identify_face_employee: {err_msg}")
-            raise InternalErrorException(err_msg)
-
-
