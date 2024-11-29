@@ -4,8 +4,11 @@ from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.params import Query
+from jose import jwt, JWTError
 
+from app.core.config import settings
 from app.core.constants.auth import ROLE_ADMIN, ROLE_HR
+from app.repositories.token import TokenRepository
 from app.schemas.attendance_mgt import IdentifyEmployee, UpdateAttendance, CreateAttendance, AttendanceFilter
 from app.services.attendance import AttendanceService
 from app.middleware.jwt import jwt_middleware, AuthUser
@@ -374,6 +377,97 @@ def detect_face(
             status_code=500,
             detail=f"An unexpected error occurred: {str(e)}"
         )
+
+@router.post('/identify-face-employee-wfh', description="Identify employee WFH and handle attendance")
+def identify_face_wfh(
+    request_body: IdentifyEmployee,
+    auth_user: Annotated[AuthUser, Depends(jwt_middleware)]
+):
+    """
+    Endpoint untuk memvalidasi WFH Employee melalui face recognition dan mengelola absensi.
+    """
+    if not auth_user.roles or (ROLE_ADMIN not in auth_user.roles and ROLE_HR not in auth_user.roles):
+        raise HTTPException(status_code=403, detail="Access denied: Only ADMIN and HR roles can access this data.")
+
+    # Validasi token
+    token = request_body.token
+    if not token:
+        raise HTTPException(status_code=400, detail="Token is required")
+
+    try:
+        token_repo = TokenRepository()
+        if token_repo.is_token_revoked(token):
+            raise HTTPException(status_code=401, detail="Token has already been used or is invalid")
+
+        # Decode the token
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+
+        # Periksa kesesuaian company ID dalam token
+        token_company_id = payload.get("company_id")
+        if str(token_company_id) != str(auth_user.company_id):
+            raise HTTPException(status_code=403, detail="Token is not valid for this user's company")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    try:
+        logger.info("Starting attendance process via Local method...")
+
+        # Proses absensi menggunakan metode lokal
+        attendance, employee_info = face_recognition_service.create_wfh(request_body)
+
+        # Tandai token sebagai revoked
+        token_repo.add_revoked_token(token)
+
+        logger.info(f"Successfully completed {employee_info.get('action')} attendance via Local method.")
+        return {
+            'success': True,
+            'data': {
+                'nik': employee_info.get('nik', ''),
+                'userName': employee_info.get('user_name', ''),
+                'companyID': employee_info.get('company_id', ''),
+                'companyName': employee_info.get('company_name', ''),
+                'action': employee_info.get('action'),
+                'timestamp': employee_info.get('timestamp')
+            },
+            'message': f"Employee is Valid by Local. {employee_info.get('action')} successful",
+            'code': 200
+        }
+
+    except HTTPException as e:
+        # Jika Local method gagal, coba fallback ke RisetAI
+        logger.warning(f"Local method failed with status {e.status_code}: {e.detail}")
+
+        if e.status_code == 404:
+            try:
+                logger.info("Attempting RisetAI fallback for face identification...")
+
+                user_company_id = uuid.UUID(auth_user.company_id)
+                attendance, employee_info = face_recognition_service.identify_face_employee(request_body, user_company_id)
+
+                # Tandai token sebagai revoked
+                token_repo.add_revoked_token(token)
+
+                logger.info(f"Successfully completed {employee_info.get('action')} attendance via RisetAI.")
+                return {
+                    'success': True,
+                    'data': {
+                        'nik': employee_info.get('nik', ''),
+                        'userName': employee_info.get('user_name', ''),
+                        'companyID': employee_info.get('company_id', ''),
+                        'companyName': employee_info.get('company_name', ''),
+                        'action': employee_info.get('action'),
+                        'timestamp': employee_info.get('timestamp')
+                    },
+                    'message': f"Employee is Valid by RisetAI. {employee_info.get('action')} successful",
+                    'code': 200
+                }
+            except Exception as riset_err:
+                logger.error(f"RisetAI method failed: {str(riset_err)}")
+                raise HTTPException(status_code=500, detail="Failed to process attendance via RisetAI")
+
+    except Exception as err:
+        logger.error(f"Error in identify_face_wfh: {str(err)}")
+        raise HTTPException(status_code=500, detail="Failed to process attendance")
 
 
 
