@@ -23,6 +23,7 @@ class CreateNewEmployee(BaseModel):
 
 class UpdateEmployee(BaseModel):
     user_name: Optional[str] = None
+    position_id: int
     nik: Optional[str] = None
     email: Optional[str] = None
     photo: Optional[str] = None

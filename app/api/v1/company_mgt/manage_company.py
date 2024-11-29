@@ -41,6 +41,8 @@ def create_company(
                 "logo": company.logo,
                 "start_time": company.start_time,
                 "end_time": company.end_time,
+                "max_late": company.max_late,
+                "min_overtime": company.min_overtime,
                 "created_at": company.created_at
         },
         "message": "Company created successfully",
@@ -116,6 +118,8 @@ def update_company(
             "logo": company.logo,
             "start_time": company.start_time,
             "end_time": company.end_time,
+            "max_late": company.max_late,
+            "min_overtime": company.min_overtime,
             "updated_at": company.updated_at
         },
         "message": "Company updated successfully",
