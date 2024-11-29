@@ -111,6 +111,8 @@ class EmployeeRepository:
                 employee.nik = payload.nik
             if payload.email is not None:
                 employee.email = payload.email
+            if payload.position_id is not None:
+                employee.position_id = payload.position_id
 
             # Perbarui entitas Face jika photo diberikan
             if payload.photo:
