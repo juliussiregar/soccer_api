@@ -79,6 +79,7 @@ class IdentifyEmployee(BaseModel):
     image: str
     company_id: Optional[str] = None
     location: Optional[str] = None
+    token: Optional[str] = None
 
 # Schema for Creating a New Attendance Entry (Generalized)
 class CreateAttendance(BaseModel):
