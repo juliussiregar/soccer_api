@@ -14,19 +14,10 @@ class CreateNewDailySalary(BaseModel):
     employee_id: Optional[str] = None
     hours_rate: Optional[int] = None
     standard_hours: Optional[int] = None
-    max_late: Optional[int] = None
-    late_deduction_rate: Optional[int] = None
-    min_overtime: Optional[int] = None
-    overtime_rate: Optional[int] = None
 
 class UpdateDailySalary(BaseModel):
     hours_rate: Optional[int] = None
     standard_hours: Optional[int] = None
-    max_late: Optional[int] = None
-    late_deduction_rate: Optional[int] = None
-    min_overtime: Optional[int] = None
-    overtime_rate: Optional[int] = None
-    
     
 class EmployeeData(BaseModel):
     id: str
@@ -43,10 +34,6 @@ class DailySalaryData(BaseModel):
     employee: Optional[EmployeeData] = None  # Include employee data
     hours_rate: Optional[int] = None
     standard_hours: Optional[int] = None
-    max_late: Optional[int] = None
-    late_deduction_rate: Optional[int] = None
-    min_overtime: Optional[int] = None
-    overtime_rate: Optional[int] = None
     created_at: datetime
     updated_at: Optional[datetime]
 

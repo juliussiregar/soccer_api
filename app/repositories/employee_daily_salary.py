@@ -45,7 +45,6 @@ class EmployeeDailySalaryRepository:
             work_date=payload.work_date,
             hours_worked=payload.hours_worked,
             late_deduction=payload.late_deduction,
-            overtime_pay=payload.overtime_pay,
             month=payload.month,
             year=payload.year,
             normal_salary=payload.normal_salary,

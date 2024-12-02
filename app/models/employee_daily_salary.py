@@ -11,7 +11,6 @@ class EmployeeDailySalary(Base):
     work_date = Column(Date, nullable=False)
     hours_worked = Column(Numeric(10, 2), nullable=False)
     late_deduction = Column(Numeric(10, 2), nullable=True)
-    overtime_pay = Column(Numeric(10, 2), nullable=True)
     month = Column(Integer, nullable=False)
     year = Column(Integer, nullable=False)
     normal_salary = Column(Numeric(10, 2), nullable=False)

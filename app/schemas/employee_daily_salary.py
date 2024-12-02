@@ -30,13 +30,12 @@ class CreateNewEmployeeDailySalary(BaseModel):
     work_date: date = Field(None, example=current_jakarta_time_example())
     hours_worked: Optional[Decimal] = None
     late_deduction: Optional[Decimal] = None
-    overtime_pay: Optional[Decimal] = None
     month: Optional[int] = None
     year: Optional[int] = None
     normal_salary: Optional[Decimal] = None
     total_salary: Optional[Decimal] = None
 
-    @validator('overtime_pay', 'normal_salary', 'total_salary', pre=True, always=True)
+    @validator('normal_salary', 'total_salary', pre=True, always=True)
     def validate_numeric_precision(cls, value):
         if value is not None:
             # Pastikan presisi tidak melebihi 2 desimal
@@ -51,13 +50,12 @@ class UpdateEmployeeDailySalary(BaseModel):
     work_date: datetime = Field(None, example=current_jakarta_time_example())
     hours_worked: Optional[Decimal] = None
     late_deduction: Optional[Decimal] = None
-    overtime_pay: Optional[Decimal] = None
     month: Optional[int] = None
     year: Optional[int] = None
     normal_salary: Optional[Decimal] = None
     total_salary: Optional[Decimal] = None
 
-    @validator('overtime_pay', 'normal_salary', 'total_salary', pre=True, always=True)
+    @validator('normal_salary', 'total_salary', pre=True, always=True)
     def validate_numeric_precision(cls, value):
         if value is not None:
             # Pastikan presisi tidak melebihi 2 desimal
@@ -74,7 +72,6 @@ class EmployeeDailySalaryData(BaseModel):
     work_date: Optional[int] = None
     hours_worked: Optional[Decimal] = None
     late_deduction: Optional[int] = None
-    overtime_pay: Optional[Decimal] = None
     month: Optional[int] = None
     year: Optional[int] = None
     normal_salary: Optional[Decimal] = None

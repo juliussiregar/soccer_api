@@ -441,26 +441,26 @@ def identify_face_wfh(
             try:
                 logger.info("Attempting RisetAI fallback for face identification...")
 
-                user_company_id = uuid.UUID(auth_user.company_id)
-                attendance, employee_info = face_recognition_service.identify_face_employee(request_body, user_company_id)
-
-                # Tandai token sebagai revoked
-                token_repo.add_revoked_token(token)
-
-                logger.info(f"Successfully completed {employee_info.get('action')} attendance via RisetAI.")
-                return {
-                    'success': True,
-                    'data': {
-                        'nik': employee_info.get('nik', ''),
-                        'userName': employee_info.get('user_name', ''),
-                        'companyID': employee_info.get('company_id', ''),
-                        'companyName': employee_info.get('company_name', ''),
-                        'action': employee_info.get('action'),
-                        'timestamp': employee_info.get('timestamp')
-                    },
-                    'message': f"Employee is Valid by RisetAI. {employee_info.get('action')} successful",
-                    'code': 200
-                }
+                # user_company_id = uuid.UUID(auth_user.company_id)
+                # attendance, employee_info = face_recognition_service.identify_face_employee(request_body, user_company_id)
+                #
+                # # Tandai token sebagai revoked
+                # token_repo.add_revoked_token(token)
+                #
+                # logger.info(f"Successfully completed {employee_info.get('action')} attendance via RisetAI.")
+                # return {
+                #     'success': True,
+                #     'data': {
+                #         'nik': employee_info.get('nik', ''),
+                #         'userName': employee_info.get('user_name', ''),
+                #         'companyID': employee_info.get('company_id', ''),
+                #         'companyName': employee_info.get('company_name', ''),
+                #         'action': employee_info.get('action'),
+                #         'timestamp': employee_info.get('timestamp')
+                #     },
+                #     'message': f"Employee is Valid by RisetAI. {employee_info.get('action')} successful",
+                #     'code': 200
+                # }
             except Exception as riset_err:
                 logger.error(f"RisetAI method failed: {str(riset_err)}")
                 raise HTTPException(status_code=500, detail="Failed to process attendance via RisetAI")

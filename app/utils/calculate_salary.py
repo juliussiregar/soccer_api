@@ -1,56 +1,72 @@
 from decimal import Decimal, ROUND_HALF_UP
+from datetime import datetime
 from app.models.attendance import Attendance
 from app.utils.exception import InternalErrorException
 from app.utils.logger import logger
 
-
 class CalculateSalary:
-    def calculate_daily_salary(self, attendance: Attendance, daily_salary, late_minutes, overtime_minutes):
-        """Menghitung gaji harian berdasarkan keterlambatan, lembur, dan jam kerja."""
+    def calculate_daily_salary(self, attendance: Attendance, company, late_minutes, daily_salary):
+        """Menghitung gaji harian berdasarkan keterlambatan, jam kerja, dan lembur."""
         try:
-            # Hitung jam kerja
-            hours_worked = Decimal(
-                (attendance.check_out - attendance.check_in).total_seconds() / 3600
-            ).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-            # hours_worked = Decimal(8)
+            # Jam kerja perusahaan
+            company_start_time = datetime.combine(attendance.check_in.date(), company.start_time)
+            company_end_time = datetime.combine(attendance.check_in.date(), company.end_time)
 
-            # Gaji normal
-            normal_salary = (Decimal(daily_salary.standard_hours) * Decimal(daily_salary.hours_rate)).quantize(
-                Decimal('0.01'), rounding=ROUND_HALF_UP)
+            # Hitung jam keterlambatan (dibulatkan ke atas per jam)
+            late_hours = Decimal(0)
+            if late_minutes > company.max_late:
+                late_hours = Decimal((late_minutes + 59) // 60)  # Dibulatkan ke atas per jam
 
-            # Perhitungan lembur
-            overtime_pay = Decimal(0)
-            if overtime_minutes > daily_salary.min_overtime:  # Min overtime in minutes
-                overtime_pay = Decimal(overtime_minutes / 60) * Decimal(daily_salary.overtime_rate)
-                overtime_pay = overtime_pay.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            # Hitung jam kerja standar
+            standard_hours = Decimal(daily_salary.standard_hours)
 
-            # Perhitungan pengurangan akibat keterlambatan
-            late_deduction = Decimal(0)
-            if late_minutes > daily_salary.max_late:  # Deduction applies only if late exceeds max_late
-                excess_late_minutes = late_minutes - daily_salary.max_late
-                total_excess_hours = Decimal(excess_late_minutes) / Decimal(60)
-                late_deduction = (total_excess_hours * Decimal(daily_salary.late_deduction_rate)).quantize(
+            # Gaji dasar (tanpa pengurangan akibat keterlambatan)
+            normal_salary = (standard_hours * Decimal(daily_salary.hours_rate)).quantize(
+                Decimal('0.01'), rounding=ROUND_HALF_UP
+            )
+
+            # Hitung pengurangan akibat keterlambatan
+            late_deduction = (late_hours * Decimal(daily_salary.hours_rate)).quantize(
+                Decimal('0.01'), rounding=ROUND_HALF_UP
+            )
+
+            # Hitung jam kerja aktual
+            actual_worked_duration = attendance.check_out - attendance.check_in
+            actual_hours_worked = Decimal(actual_worked_duration.total_seconds() / 3600).quantize(
+                Decimal('0.01'), rounding=ROUND_HALF_UP
+            )
+
+            # Hitung jam kerja yang dapat dibayarkan
+            max_payable_hours = max(Decimal(0), standard_hours - late_hours)
+            payable_hours = min(max_payable_hours, actual_hours_worked)
+            total_salary = (payable_hours * Decimal(daily_salary.hours_rate)).quantize(
+                Decimal('0.01'), rounding=ROUND_HALF_UP
+            )
+
+            # Hitung jam lembur
+            overtime_hours = Decimal(0)
+            if attendance.check_out > company_end_time:
+                overtime_duration = attendance.check_out - company_end_time
+                overtime_hours = Decimal(overtime_duration.total_seconds() / 3600).quantize(
                     Decimal('0.01'), rounding=ROUND_HALF_UP
                 )
 
             # Logging untuk debugging
-            logger.info(f"Hours worked: {hours_worked}")
-            logger.info(f"Normal salary: {normal_salary}")
-            logger.info(f"Overtime pay: {overtime_pay}")
+            logger.info(f"Actual hours worked: {actual_hours_worked}")
+            logger.info(f"Late hours: {late_hours}")
             logger.info(f"Late deduction: {late_deduction}")
-
-            # Gaji yang disesuaikan
-            adjusted_salary = (hours_worked * Decimal(daily_salary.hours_rate)).quantize(
-                Decimal('0.01'), rounding=ROUND_HALF_UP)
-
-            # Total gaji
-            total_salary = (adjusted_salary + overtime_pay - late_deduction).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            logger.info(f"Payable hours: {payable_hours}")
+            logger.info(f"Normal salary (no late): {normal_salary}")
+            logger.info(f"Total salary: {total_salary}")
+            logger.info(f"Overtime hours: {overtime_hours}")
 
             return {
-                "hours_worked": hours_worked,
-                "normal_salary": normal_salary,
-                "overtime_pay": overtime_pay,
+                "hours_worked": actual_hours_worked,
+                "late_hours": late_hours,
                 "late_deduction": late_deduction,
+                "payable_hours": payable_hours,
+                "overtime_hours": overtime_hours,
+                "normal_salary": normal_salary,
                 "total_salary": total_salary
             }
         except Exception as e:

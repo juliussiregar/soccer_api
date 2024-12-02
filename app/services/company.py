@@ -20,11 +20,11 @@ class CompanyService:
             company = self.company_repo.insert(payload)
 
             # Setelah membuat perusahaan, buat FaceGallery dengan ID perusahaan
-            payload_facegallery = CreateFaceGallery(facegallery_id=str(company.id), trx_id=str(company.id))
-            facegallery = self.clients.create_facegallery(payload_facegallery)
-
-            if facegallery is None:
-                raise InternalErrorException("Failed to create FaceGallery.")
+            # payload_facegallery = CreateFaceGallery(facegallery_id=str(company.id), trx_id=str(company.id))
+            # facegallery = self.clients.create_facegallery(payload_facegallery)
+            #
+            # if facegallery is None:
+            #     raise InternalErrorException("Failed to create FaceGallery.")
 
         except Exception as err:
             err_msg = str(err)
@@ -110,11 +110,11 @@ class CompanyService:
                 raise UnprocessableException("Company not found")
 
             # Hapus FaceGallery menggunakan ID yang sama
-            payload_facegallery = DeleteFaceGallery(facegallery_id=str(company_id), trx_id=str(company_id))
-            delete_response = self.clients.delete_facegallery(payload_facegallery)
-
-            if delete_response is None:
-                raise InternalErrorException("Failed to delete FaceGallery.")
+            # payload_facegallery = DeleteFaceGallery(facegallery_id=str(company_id), trx_id=str(company_id))
+            # delete_response = self.clients.delete_facegallery(payload_facegallery)
+            #
+            # if delete_response is None:
+            #     raise InternalErrorException("Failed to delete FaceGallery.")
 
         except Exception as err:
             err_msg = str(err)
