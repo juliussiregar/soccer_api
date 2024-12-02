@@ -103,18 +103,21 @@ class AttendanceService:
 
             # Perhitungan salary jika ada data salary harian
             daily_salary = self.daily_salary_repo.get_by_employee_id(payload.employee_id)
-            if daily_salary:
-                salary_data = self.calculate_salary_utils.calculate_daily_salary(
-                    new_attendance, daily_salary, late_minutes, overtime_minutes
-                )
+            # if daily_salary:
+            #     salary_data = self.calculate_salary_utils.calculate_daily_salary(
+            #         new_attendance, daily_salary, late_minutes, overtime_minutes
+            #     )
 
+            company = self.company_repo.get_company_by_employee_id(payload.employee_id)
+            if company and daily_salary:
+                salary_data = self.calculate_salary_utils.calculate_daily_salary(new_attendance, company,
+                                                                                 late_minutes, daily_salary)
                 # Buat payload salary
                 new_salary_payload = CreateNewEmployeeDailySalary(
                     employee_id=payload.employee_id,
                     work_date=new_attendance.check_in.date(),
                     hours_worked=round(salary_data["hours_worked"], 2),
                     late_deduction=round(salary_data["late_deduction"], 2),
-                    overtime_pay=round(salary_data["overtime_pay"], 2),
                     month=new_attendance.check_in.month,
                     year=new_attendance.check_in.year,
                     normal_salary=round(salary_data["normal_salary"], 2),
@@ -295,9 +298,12 @@ class AttendanceService:
 
             # Periksa apakah ada data gaji harian
             daily_salary = self.daily_salary_repo.get_by_employee_id(payload.employee_id)
-            if daily_salary:
-                salary_data = self.calculate_salary_utils.calculate_daily_salary(updated_attendance, daily_salary, late_minutes,
-                                                          overtime_minutes)
+            # if daily_salary:
+            #     salary_data = self.calculate_salary_utils.calculate_daily_salary(updated_attendance, daily_salary, late_minutes)
+
+            company = self.company_repo.get_company_by_employee_id(payload.employee_id)
+            if company and daily_salary:
+                salary_data = self.calculate_salary_utils.calculate_daily_salary(updated_attendance, company, late_minutes, daily_salary)
 
                 # Buat payload untuk data gaji harian
                 new_salary_payload = CreateNewEmployeeDailySalary(
@@ -305,7 +311,6 @@ class AttendanceService:
                     work_date=today_start.date(),
                     hours_worked=salary_data["hours_worked"],
                     late_deduction=salary_data["late_deduction"],
-                    overtime_pay=salary_data["overtime_pay"],
                     month=today_start.month,
                     year=today_start.year,
                     normal_salary=salary_data["normal_salary"],
@@ -327,117 +332,3 @@ class AttendanceService:
             raise InternalErrorException("Failed to update check-out or calculate daily salary.")
 
         return updated_attendance
-
-    def create_check_in_wfh(self, payload: CreateCheckIn) -> Attendance:
-        # Validasi apakah perusahaan ada
-        company = self.company_repo.get_company_by_id(payload.company_id)
-        if not company:
-            raise HTTPException(status_code=404, detail="Company not found")
-
-        # Konversi company.start_time dan company.end_time ke datetime dengan timezone
-        current_date = datetime.now(jakarta_timezone).date()
-        standard_start_time = datetime.combine(current_date, company.start_time, tzinfo=jakarta_timezone)
-        standard_end_time = datetime.combine(current_date, company.end_time, tzinfo=jakarta_timezone)
-
-        # Gunakan waktu perusahaan untuk check-in dan check-out
-        check_in_time = standard_start_time
-        check_out_time = standard_end_time
-
-        # Validasi apakah employee ada di perusahaan tersebut
-        employee = self.employee_repo.get_employee_by_id(payload.employee_id)
-        if not employee or employee.company_id != payload.company_id:
-            raise HTTPException(status_code=404, detail="Employee not found in the specified company")
-
-        # Periksa apakah employee sudah check-in untuk hari ini
-        today_start = self.get_start_of_day(datetime.now(jakarta_timezone))
-        existing_attendance = self.attendance_repo.existing_attendance(payload.employee_id, today_start)
-        if existing_attendance:
-            raise UnprocessableException("Employee has already checked in today.")
-
-        # Pastikan check_in_time dan standard_start_time keduanya menggunakan timezone yang sama
-        if check_in_time.tzinfo is None:
-            check_in_time = jakarta_timezone.localize(check_in_time)
-
-        if standard_start_time.tzinfo is None:
-            standard_start_time = jakarta_timezone.localize(standard_start_time)
-
-        # Hitung keterlambatan (late minutes) dan lembur (overtime minutes)
-        late_minutes = 0
-        if check_in_time > standard_start_time:
-            late_minutes = int((check_in_time - standard_start_time).total_seconds() // 60)
-
-        overtime_minutes = 0
-        if check_out_time > standard_end_time:
-            overtime_minutes = int((check_out_time - standard_end_time).total_seconds() // 60)
-
-        # Konversi keterlambatan dan lembur ke format jam dan menit
-        late_hours = late_minutes // 60
-        late_remaining_minutes = late_minutes % 60
-        overtime_hours = overtime_minutes // 60
-        overtime_remaining_minutes = overtime_minutes % 60
-
-        # Buat deskripsi
-        description = (
-            f"Checked in with {late_hours} hours {late_remaining_minutes} minutes late and "
-            f"Checked out with {overtime_hours} hours {overtime_remaining_minutes} minutes overtime."
-        )
-        logger.info(f"Description: {description}")
-
-        # Insert check-in dan check-out ke database
-        try:
-            # Insert check-in
-            check_in_payload = CreateCheckIn(
-                company_id=payload.company_id,
-                employee_id=payload.employee_id,
-                check_in=check_in_time,
-                photo_in=payload.photo_in,
-                location=payload.location,
-                type=payload.type
-            )
-            new_attendance = self.attendance_repo.insert_attendance_checkin(check_in_payload)
-
-            # Update check-out langsung
-            check_out_payload = UpdateCheckOut(
-                company_id=payload.company_id,
-                employee_id=payload.employee_id,
-                check_out=check_out_time,
-                photo_out=payload.photo_in,  # Gunakan foto check-in
-                location=payload.location,  # Gunakan lokasi check-in
-            )
-            updated_attendance = self.attendance_repo.update_attendance_checkout(
-                check_out_payload, late_minutes, overtime_minutes, description
-            )
-
-            # Perhitungan gaji harian
-            daily_salary = self.daily_salary_repo.get_by_employee_id(payload.employee_id)
-            if daily_salary:
-                salary_data = self.calculate_salary_utils.calculate_daily_salary(
-                    updated_attendance, daily_salary, late_minutes, overtime_minutes
-                )
-
-                # Buat payload untuk data gaji harian
-                new_salary_payload = CreateNewEmployeeDailySalary(
-                    employee_id=payload.employee_id,
-                    work_date=today_start.date(),
-                    hours_worked=salary_data["hours_worked"],
-                    late_deduction=salary_data["late_deduction"],
-                    overtime_pay=salary_data["overtime_pay"],
-                    month=today_start.month,
-                    year=today_start.year,
-                    normal_salary=salary_data["normal_salary"],
-                    total_salary=salary_data["total_salary"],
-                )
-
-                # Insert data gaji harian jika belum ada
-                existing_salary = self.employee_daily_salary_repo.get_by_employee_id_and_date(
-                    payload.employee_id, today_start.date()
-                )
-                if not existing_salary:
-                    self.employee_daily_salary_repo.insert(new_salary_payload)
-                    logger.info("Inserted new salary data.")
-
-        except Exception as err:
-            logger.error(f"Error during check-in and automatic check-out: {err}")
-            raise InternalErrorException("Failed to create check-in and automatic check-out.")
-
-        return new_attendance

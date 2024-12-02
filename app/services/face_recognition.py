@@ -7,7 +7,6 @@ from app.core.constants.app import DEFAULT_TZ
 from app.repositories.daily_salary import DailySalaryRepository
 from app.repositories.employee import EmployeeRepository
 from app.repositories.employee_daily_salary import EmployeeDailySalaryRepository
-from app.schemas.employee_daily_salary import CreateNewEmployeeDailySalary
 from app.services.attendance import AttendanceService
 from app.utils.calculate_salary import CalculateSalary
 from app.utils.exception import InternalErrorException, UnprocessableException
@@ -427,7 +426,7 @@ class FaceRecognitionService:
             )
 
             # Create attendance record with check-in details
-            updated_attendance = self.attendance_service.create_check_in(check_in_payload)
+            self.attendance_service.create_check_in(check_in_payload)
 
             # Immediately update check-out in the same record
             checkout_payload = UpdateCheckOut(
@@ -507,7 +506,7 @@ class FaceRecognitionService:
             )
 
             # Create attendance record with check-in details
-            updated_attendance = self.attendance_service.create_check_in(attendance_payload)
+            self.attendance_service.create_check_in(attendance_payload)
 
             # Immediately update check-out in the same record
             checkout_payload = UpdateCheckOut(

@@ -42,25 +42,11 @@ def create_employee_daily_salary(
         work_date=request_body.work_date,
         hours_worked=request_body.hours_worked,
         late_deduction=request_body.late_deduction,
-        overtime_pay=request_body.overtime_pay,
         month=request_body.month,
         year=request_body.year,
         normal_salary=request_body.normal_salary,
         total_salary=request_body.total_salary,
     ))
-
-    return {"data": employee_daily_salary}
-
-@router.post('/employee-daily-salaries/calculate', description="Calculate and create a new Employee Daily Salary")
-def calculate_and_create_employee_daily_salary(
-    auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
-    request_body: CreateNewEmployeeDailySalary
-):
-    if not ROLE_ADMIN or ROLE_HR in auth_user.roles:
-        raise HTTPException(status_code=403, detail=ACCESS_DENIED_MSG)
-
-    # Call service to calculate and create salary
-    employee_daily_salary = employee_daily_salary_service.create_employee_daily_salary_with_calculation(request_body)
 
     return {"data": employee_daily_salary}
 

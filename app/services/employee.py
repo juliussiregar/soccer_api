@@ -102,47 +102,47 @@ class EmployeeService:
                 raise UnprocessableException(f"Email '{payload.email}' is already in use.")
 
         try:
-            # Cek apakah ada perubahan pada nik, atau photo yang mempengaruhi face
-            should_reregister_face = False
-
-            if payload.nik and payload.nik != employee.nik:
-                should_reregister_face = True
-
-            if payload.photo and payload.photo != (employee.face[0].photo if employee.face else None):
-                should_reregister_face = True
-
-            # Jika ada perubahan yang mempengaruhi face, maka hapus wajah dan daftarkan ulang
-            if should_reregister_face:
-                company = self.company_repo.get_company_by_employee_id(employee_id)
-                if not company:
-                    raise UnprocessableException("Associated company not found.")
-
-                # Hapus data wajah lama
-                trx_id_delete = uuid.uuid4()
-                delete_face_employee = DeleteFace(
-                    user_id=str(employee.nik),
-                    facegallery_id=str(company.id),
-                    trx_id=str(trx_id_delete),
-                )
-                self.face_api_clients.delete_face(delete_face_employee)
-
-                # Update karyawan di database
-                updated_employee = self.employee_repo.update(employee_id, payload)
-
-                # Daftarkan ulang wajah setelah perubahan
-                trx_id_create = uuid.uuid4()
-                enroll = CreateEnrollFace(
-                    user_id=str(updated_employee.nik),
-                    user_name=updated_employee.user_name,
-                    facegallery_id=str(updated_employee.company_id),
-                    image=payload.photo,
-                    trx_id=str(trx_id_create),
-                )
-                self.face_api_clients.insert_faces_visitor(enroll)
-
-            else:
+            # # Cek apakah ada perubahan pada nik, atau photo yang mempengaruhi face
+            # should_reregister_face = False
+            #
+            # if payload.nik and payload.nik != employee.nik:
+            #     should_reregister_face = True
+            #
+            # if payload.photo and payload.photo != (employee.face[0].photo if employee.face else None):
+            #     should_reregister_face = True
+            #
+            # # Jika ada perubahan yang mempengaruhi face, maka hapus wajah dan daftarkan ulang
+            # if should_reregister_face:
+            #     company = self.company_repo.get_company_by_employee_id(employee_id)
+            #     if not company:
+            #         raise UnprocessableException("Associated company not found.")
+            #
+            #     # Hapus data wajah lama
+            #     trx_id_delete = uuid.uuid4()
+            #     delete_face_employee = DeleteFace(
+            #         user_id=str(employee.nik),
+            #         facegallery_id=str(company.id),
+            #         trx_id=str(trx_id_delete),
+            #     )
+            #     self.face_api_clients.delete_face(delete_face_employee)
+            #
+            #     # Update karyawan di database
+            #     updated_employee = self.employee_repo.update(employee_id, payload)
+            #
+            #     # Daftarkan ulang wajah setelah perubahan
+            #     trx_id_create = uuid.uuid4()
+            #     enroll = CreateEnrollFace(
+            #         user_id=str(updated_employee.nik),
+            #         user_name=updated_employee.user_name,
+            #         facegallery_id=str(updated_employee.company_id),
+            #         image=payload.photo,
+            #         trx_id=str(trx_id_create),
+            #     )
+            #     self.face_api_clients.insert_faces_visitor(enroll)
+            #
+            # else:
                 # Jika tidak ada perubahan yang mempengaruhi face, cukup update karyawan
-                updated_employee = self.employee_repo.update(employee_id, payload)
+            updated_employee = self.employee_repo.update(employee_id, payload)
 
         except Exception as e:
             logger.error(f"Failed to update employee: {str(e)}")
@@ -189,17 +189,17 @@ class EmployeeService:
                 self.application_repo.delete_application_by_employee_id(employee_id)
 
             # Generate ID transaksi unik
-            trx_id = uuid.uuid4()
-
-            # Siapkan data untuk Face API
-            delete_face_employee = DeleteFace(
-                user_id=str(get_employee.nik),
-                facegallery_id=str(company.id),
-                trx_id=str(trx_id)
-            )
-
-            # Panggil Face API untuk menghapus data wajah
-            face_api_response, _ = self.face_api_clients.delete_face(delete_face_employee)
+            # trx_id = uuid.uuid4()
+            #
+            # # Siapkan data untuk Face API
+            # delete_face_employee = DeleteFace(
+            #     user_id=str(get_employee.nik),
+            #     facegallery_id=str(company.id),
+            #     trx_id=str(trx_id)
+            # )
+            #
+            # # Panggil Face API untuk menghapus data wajah
+            # face_api_response, _ = self.face_api_clients.delete_face(delete_face_employee)
 
             employee = self.employee_repo.delete_employee_by_id(employee_id)
 
