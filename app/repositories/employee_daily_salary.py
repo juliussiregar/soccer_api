@@ -105,3 +105,13 @@ class EmployeeDailySalaryRepository:
 
                 )
             )
+
+    def get_all_by_month_year(self, employee_id: uuid.UUID, month: int, year: int):
+        with get_session() as db:
+            return (
+                db.query(EmployeeDailySalary)
+                .filter(EmployeeDailySalary.employee_id == employee_id)
+                .filter(EmployeeDailySalary.month == month)
+                .filter(EmployeeDailySalary.year == year)
+                .first()
+            )
