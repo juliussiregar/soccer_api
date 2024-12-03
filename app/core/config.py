@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     postgres_port: str
     database_uri: Optional[PostgresDsn] = None
 
+    celery_broker_url: str
+    celery_result_backend: str
+
     jwt_secret: str
     jwt_algorithm: str
 
