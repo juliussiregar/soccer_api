@@ -221,7 +221,13 @@ class FaceRecognitionService:
 
             # Check for existing attendance for today
             today_start = datetime.now(jakarta_timezone).replace(hour=0, minute=0, second=0, microsecond=0)
-            existing_attendance = self.attendance_repo.existing_attendance(employee_id, today_start)
+            today_end = datetime.now(jakarta_timezone).replace(hour=23, minute=59, second=59, microsecond=999999)
+            existing_attendance = self.attendance_repo.existing_attendance_today(employee_id, today_start, today_end)
+
+            if existing_attendance and existing_attendance.check_in and existing_attendance.check_out:
+                # Validation: Cannot check-in or check-out again if both are already completed
+                logger.warning(f"Employee {employee_id} already checked in and out today.")
+                raise HTTPException(status_code=400, detail="You have already checked in and out today.")
 
             if existing_attendance:
                 # Perform check-out if there is an existing attendance
@@ -296,6 +302,14 @@ class FaceRecognitionService:
 
             # Check for existing attendance for today
             today_start = datetime.now(jakarta_timezone).replace(hour=0, minute=0, second=0, microsecond=0)
+            today_end = datetime.now(jakarta_timezone).replace(hour=23, minute=59, second=59, microsecond=999999)
+            existing_attendance = self.attendance_repo.existing_attendance_today(employee_id, today_start, today_end)
+
+            if existing_attendance and existing_attendance.check_in and existing_attendance.check_out:
+                # Validation: Cannot check-in or check-out again if both are already completed
+                logger.warning(f"Employee {employee.id} already checked in and out today.")
+                raise HTTPException(status_code=400, detail="You have already checked in and out today.")
+
             existing_attendance = self.attendance_repo.existing_attendance(employee.id, today_start)
 
             if existing_attendance:

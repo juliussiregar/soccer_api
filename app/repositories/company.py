@@ -83,7 +83,6 @@ class CompanyRepository:
             start_time=payload.start_time,
             end_time=payload.end_time,
             max_late=payload.max_late,
-            min_overtime=payload.min_overtime
         )
 
         with get_session() as db:
@@ -102,7 +101,6 @@ class CompanyRepository:
             start_time=time(0, 0),
             end_time=time(23, 59),
             max_late=0,
-            min_overtime=0,
             created_at= get_now()
         )
 
@@ -131,8 +129,6 @@ class CompanyRepository:
                 company.end_time = payload.end_time
             if payload.max_late is not None:
                 company.max_late = payload.max_late
-            if payload.min_overtime is not None:
-                company.min_overtime = payload.min_overtime
 
             company.updated_at = get_now()
             db.commit()

@@ -45,10 +45,6 @@ def create_daily_salary(
         employee_id=request_body.employee_id,
         hours_rate=request_body.hours_rate,
         standard_hours=request_body.standard_hours,
-        max_late=request_body.max_late,
-        late_deduction_rate=request_body.late_deduction_rate,
-        min_overtime=request_body.min_overtime,
-        overtime_rate=request_body.overtime_rate
     ))
 
     return {"data": daily_salary}

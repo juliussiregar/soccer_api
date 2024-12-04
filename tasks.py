@@ -20,6 +20,7 @@ celery_app.conf.update(
         'calculate_monthly_salary_every_month': {
             'task': 'app.services.employee_monthly_salary_periodic.calculate_monthly_salary_periodic',  # Nama task yang akan dijalankan
             'schedule': crontab(minute="0", hour="0"),  # Menjalankan task setiap hari pada jam 00:00
+            # 'schedule': crontab(minute="*"),  # Menjalankan task setiap menit
         },
     },
     imports=['app.services.employee_monthly_salary_periodic'],
