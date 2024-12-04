@@ -80,8 +80,11 @@ def get_company_by_id(
     auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
     company_id: uuid.UUID
 ):
-    if not auth_user:
-        raise HTTPException(status_code=403, detail="Access denied: Please Login First.")
+    if not auth_user.roles or ROLE_ADMIN not in auth_user.roles:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied: Only ADMIN role can get company."
+        )
 
     company = company_service.get_company(company_id)
 

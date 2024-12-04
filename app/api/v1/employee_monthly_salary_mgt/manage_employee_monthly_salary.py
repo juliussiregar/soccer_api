@@ -25,7 +25,7 @@ employee_service = EmployeeService()
 
 ACCESS_DENIED_MSG = "Access denied for this role"
 
-@router.post("/employee-monthly-salary/create-update-calculate")
+@router.post("/employee-monthly-salaries/create-update-calculate")
 async def create_update_monthly_salary(
         auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
         request: SalaryRequest
