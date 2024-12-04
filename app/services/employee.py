@@ -48,15 +48,15 @@ class EmployeeService:
             employee, face = self.employee_repo.insert(payload)
 
             # Panggil Face API untuk enroll wajah
-            trx_id = uuid.uuid4()
-            enroll = CreateEnrollFace(
-                user_id=str(employee.nik),
-                user_name=employee.user_name,
-                facegallery_id=str(employee.company_id),
-                image=payload.photo,
-                trx_id=str(trx_id)
-            )
-            self.face_api_clients.insert_faces_visitor(enroll)
+            # trx_id = uuid.uuid4()
+            # enroll = CreateEnrollFace(
+            #     user_id=str(employee.nik),
+            #     user_name=employee.user_name,
+            #     facegallery_id=str(employee.company_id),
+            #     image=payload.photo,
+            #     trx_id=str(trx_id)
+            # )
+            # self.face_api_clients.insert_faces_visitor(enroll)
 
         except Exception as e:
             logger.error(f"Failed to create employee: {str(e)}")

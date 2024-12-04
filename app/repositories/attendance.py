@@ -283,6 +283,18 @@ class AttendanceRepository:
                 .first()
             )
 
+    def existing_attendance_today(self, employee_id: uuid.UUID, today_start: datetime, today_end: datetime) -> Optional[Attendance]:
+        with get_session() as db:
+            return (
+                db.query(Attendance)
+                .filter(
+                    Attendance.employee_id == employee_id,
+                    Attendance.check_in >= today_start,
+                    Attendance.check_out <= today_end
+                )
+                .first()
+            )
+
     def get_last_attendance_by_employee_id(self, employee_id: uuid.UUID) -> Optional[Attendance]:
         """Get the most recent attendance record by employee_id."""
         with get_session() as db:

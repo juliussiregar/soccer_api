@@ -14,7 +14,6 @@ class CreateNewCompany(BaseModel):
     start_time: time
     end_time: time
     max_late: Optional[int] = None
-    min_overtime: Optional[int] = None
 
 class UpdateCompany(BaseModel):
     name: Optional[str] = None
@@ -22,7 +21,6 @@ class UpdateCompany(BaseModel):
     start_time: Optional[time] = None
     end_time: Optional[time] = None
     max_late: Optional[int] = None
-    min_overtime: Optional[int] = None
 
 class CreateFaceGalleryCompany(BaseModel):
     id: uuid.UUID
@@ -34,7 +32,6 @@ class CompanyData(BaseModel):
     start_time: time
     end_time: time
     max_late: Optional[int] = None
-    min_overtime: Optional[int] = None
     created_at: datetime
     updated_at: Optional[datetime]
 

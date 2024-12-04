@@ -13,7 +13,6 @@ class Company(Base):
     start_time = Column(Time, nullable=False)
     end_time = Column(Time, nullable=False)
     max_late = Column(Integer, nullable=False)
-    min_overtime = Column(Integer, nullable=False)
     created_at = Column(DateTime, server_default=func.timezone(DEFAULT_TZ, func.now()))
     updated_at = Column(DateTime, nullable=True)
     deleted_at = Column(DateTime, nullable=True)
