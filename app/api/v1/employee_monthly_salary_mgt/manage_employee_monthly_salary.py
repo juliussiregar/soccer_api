@@ -56,7 +56,6 @@ def get_employee_monthly_salaries(
     return {"data": employee_monthly_salaries,
             "meta": {"limit": limit, "page": page, "total_rows": total_rows, "total_pages": total_pages}}
 
-
 @router.get('/employee-monthly-salaries/{employee_monthly_salary_id}')
 def get_employee_monthly_salary_by_id(
         auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
@@ -71,7 +70,6 @@ def get_employee_monthly_salary_by_id(
 
     return {"data": employee_monthly_salary}
 
-
 @router.put('/employee-monthly-salaries/{employee_monthly_salary_id}')
 def update_employee_monthly_salary(
         auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
@@ -82,12 +80,13 @@ def update_employee_monthly_salary(
     if employee_monthly_salary is None:
         raise HTTPException(status_code=404, detail="Employee Monthly Salary not found")
 
+    request_body.updated_by = auth_user.full_name
+
     updated_employee_monthly_salary = employee_monthly_salary_service.update_employee_monthly_salary(
         employee_monthly_salary_id=employee_monthly_salary_id,
         payload=request_body
     )
     return {"data": updated_employee_monthly_salary}
-
 
 @router.delete('/employee-monthly-salaries/{employee_monthly_salary_id}')
 def delete_employee_monthly_salary(

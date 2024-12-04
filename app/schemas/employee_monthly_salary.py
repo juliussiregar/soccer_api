@@ -1,11 +1,11 @@
-# schemas/employee_daily_salary.py
+# schemas/employee_monthly_salary.py
 import uuid
 from decimal import Decimal
 
 import pytz
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, validator
 from typing import Optional
-from datetime import datetime, date
+from datetime import datetime
 
 from app.core.constants.app import DEFAULT_TZ
 
@@ -51,6 +51,7 @@ class CreateNewEmployeeMonthlySalary(BaseModel):
 class UpdateEmployeeMonthlySalary(BaseModel):
     normal_salary: Optional[Decimal] = None
     total_salary: Optional[Decimal] = None
+    updated_by: Optional[str] = None
 
     @validator('normal_salary', 'total_salary', pre=True, always=True)
     def validate_numeric_precision(cls, value):
@@ -76,6 +77,7 @@ class EmployeeMonthlySalaryData(BaseModel):
     total_salary: Optional[Decimal] = None
     created_at: datetime
     updated_at: Optional[datetime]
+    updated_by: Optional[str] = None
 
     class Config:
         from_attributes = True

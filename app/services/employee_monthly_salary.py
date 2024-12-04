@@ -41,7 +41,7 @@ class EmployeeMonthlySalaryService:
                     # Update data gaji bulanan
                     updated_salary = UpdateEmployeeMonthlySalary(
                         normal_salary=normal_salary,
-                        total_salary=total_salary
+                        total_salary=total_salary,
                     )
                     self.employee_monthly_salary_repo.update(existing_monthly_salary.id, updated_salary)
                     logger.info(f"Updated monthly salary for employee {employee_id}")

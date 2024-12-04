@@ -3,7 +3,7 @@
 from typing import List, Optional
 import uuid
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Query
 from app.core.database import get_session
 from app.models.employee_daily_salary import EmployeeDailySalary
@@ -109,7 +109,9 @@ class EmployeeMonthlySalaryRepository:
         )
 
     def get_total_monthly_salary_by_employee(self, month: int, year: int):
-        """Mengambil total gaji bulanan per karyawan berdasarkan bulan dan tahun"""
+        """Mengambil total gaji bulanan per karyawan berdasarkan bulan dan tahun,
+        hanya untuk salary bulanan yang belum diupdate (updated_by is None).
+        """
         with get_session() as db:
             result = (
                 db.query(
@@ -117,11 +119,20 @@ class EmployeeMonthlySalaryRepository:
                     func.max(EmployeeDailySalary.normal_salary).label('normal_salary'),
                     func.sum(EmployeeDailySalary.total_salary).label('total_monthly_salary')
                 )
+                .join(
+                    EmployeeMonthlySalary,
+                    (EmployeeDailySalary.employee_id == EmployeeMonthlySalary.employee_id) &
+                    (EmployeeDailySalary.month == EmployeeMonthlySalary.month) &
+                    (EmployeeDailySalary.year == EmployeeMonthlySalary.year),
+                    isouter=True
+                )
                 .filter(
                     EmployeeDailySalary.month == month,
-                    EmployeeDailySalary.year == year
+                    EmployeeDailySalary.year == year,
+                    or_(EmployeeMonthlySalary.id.is_(None), EmployeeMonthlySalary.updated_by.is_(None))
                 )
                 .group_by(EmployeeDailySalary.employee_id)
                 .all()
             )
         return result
+
