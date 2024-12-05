@@ -17,7 +17,7 @@ services:
       TZ: Asia/Jakarta
       URL: aluesagd.com
       VALIDATION: http
-      SUBDOMAINS: api-vms,dashboard-vms
+      SUBDOMAINS: api-vms
       ONLY_SUBDOMAINS: true
     restart: unless-stopped
 
