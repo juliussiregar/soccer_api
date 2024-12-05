@@ -98,14 +98,6 @@ class EmployeeDailySalaryRepository:
             .first()
         )
 
-    def get_employees_by_company(self, company_id: uuid.UUID):
-        with get_session() as db:
-            result = (
-                db.query(
-
-                )
-            )
-
     def get_all_by_month_year(self, employee_id: uuid.UUID, month: int, year: int):
         with get_session() as db:
             return (

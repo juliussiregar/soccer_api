@@ -222,15 +222,22 @@ class FaceRecognitionService:
             # Check for existing attendance for today
             today_start = datetime.now(jakarta_timezone).replace(hour=0, minute=0, second=0, microsecond=0)
             today_end = datetime.now(jakarta_timezone).replace(hour=23, minute=59, second=59, microsecond=999999)
-            existing_attendance = self.attendance_repo.existing_attendance_today(employee_id, today_start, today_end)
 
-            if existing_attendance and existing_attendance.check_in and existing_attendance.check_out:
-                # Validation: Cannot check-in or check-out again if both are already completed
+            # Pertama, cek apakah sudah complete check-in dan check-out hari ini
+            existing_complete_attendance = self.attendance_repo.existing_attendance_today(
+                employee_id, today_start, today_end
+            )
+
+            if existing_complete_attendance:
+                # Jika sudah complete check-in dan check-out, tolak proses lebih lanjut
                 logger.warning(f"Employee {employee_id} already checked in and out today.")
                 raise HTTPException(status_code=400, detail="You have already checked in and out today.")
 
+            # Cek apakah sudah check-in tapi belum check-out
+            existing_attendance = self.attendance_repo.existing_attendance(employee_id, today_start)
+
             if existing_attendance:
-                # Perform check-out if there is an existing attendance
+                # Jika sudah check-in sebelumnya, lakukan check-out
                 check_out_time = datetime.now(jakarta_timezone)
                 update_payload = UpdateCheckOut(
                     company_id=company_id,
@@ -242,7 +249,7 @@ class FaceRecognitionService:
                 updated_attendance = self.attendance_service.update_check_out(update_payload)
                 action = "Check-out"
             else:
-                # Perform check-in if no existing attendance
+                # Jika belum check-in, lakukan check-in
                 check_in_time = datetime.now(jakarta_timezone)
                 check_in_payload = CreateCheckIn(
                     company_id=company_id,
@@ -303,17 +310,22 @@ class FaceRecognitionService:
             # Check for existing attendance for today
             today_start = datetime.now(jakarta_timezone).replace(hour=0, minute=0, second=0, microsecond=0)
             today_end = datetime.now(jakarta_timezone).replace(hour=23, minute=59, second=59, microsecond=999999)
-            existing_attendance = self.attendance_repo.existing_attendance_today(employee_id, today_start, today_end)
 
-            if existing_attendance and existing_attendance.check_in and existing_attendance.check_out:
-                # Validation: Cannot check-in or check-out again if both are already completed
+            # Pertama, cek apakah sudah complete check-in dan check-out hari ini
+            existing_complete_attendance = self.attendance_repo.existing_attendance_today(
+                employee.id, today_start, today_end
+            )
+
+            if existing_complete_attendance:
+                # Jika sudah complete check-in dan check-out, tolak proses lebih lanjut
                 logger.warning(f"Employee {employee.id} already checked in and out today.")
                 raise HTTPException(status_code=400, detail="You have already checked in and out today.")
 
+            # Cek apakah sudah check-in tapi belum check-out
             existing_attendance = self.attendance_repo.existing_attendance(employee.id, today_start)
 
             if existing_attendance:
-                # Perform check-out if there is an existing attendance
+                # Jika sudah check-in sebelumnya, lakukan check-out
                 check_out_time = datetime.now(jakarta_timezone)
                 update_payload = UpdateCheckOut(
                     company_id=company.id,
@@ -325,7 +337,7 @@ class FaceRecognitionService:
                 updated_attendance = self.attendance_service.update_check_out(update_payload)
                 action = "Check-out"
             else:
-                # Perform check-in if no existing attendance
+                # Jika belum check-in, lakukan check-in
                 check_in_time = datetime.now(jakarta_timezone)
                 check_in_payload = CreateCheckIn(
                     company_id=company.id,
