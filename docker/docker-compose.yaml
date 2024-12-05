@@ -2,24 +2,24 @@ version: "3.8"
 
 services:
   nginx:
-      image: linuxserver/swag
-      cap_add:
-        - NET_ADMIN
-      ports:
-        - "80:80"
-        - "443:443"
-      volumes:
-        - ./nginx:/config/nginx
-        - ./../uploads:/uploads
-      environment:
-        PUID: 1003
-        PGID: 1003
-        TZ: Asia/Jakarta
-        URL: aluesagd.com
-        VALIDATION: http
-        SUBDOMAINS: api-vms,dashboard-vms
-        ONLY_SUBDOMAINS: true
-        restart: unless-stopped
+    image: linuxserver/swag
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx:/config/nginx
+      - ./../uploads:/uploads
+    environment:
+      PUID: 1003
+      PGID: 1003
+      TZ: Asia/Jakarta
+      URL: aluesagd.com
+      VALIDATION: http
+      SUBDOMAINS: api-vms,dashboard-vms
+      ONLY_SUBDOMAINS: true
+    restart: unless-stopped
 
   postgres:
     image: postgres:13-alpine
@@ -72,17 +72,6 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
     command: ["celery", "-A", "tasks", "worker", "--loglevel=info"]
     restart: unless-stopped
-
-  dashboard:
-    image: visitorms-dashboard
-    depends_on:
-      - app
-    environment:
-      NEXT_PUBLIC_API_URL: api-vms.aluesagd.com
-      TZ: Asia/Jakarta
-    restart: unless-stopped
-    ports:
-      - "8081:80"
 
   app:
     image: employeeappimage
