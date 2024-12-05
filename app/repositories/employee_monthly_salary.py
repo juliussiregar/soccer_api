@@ -116,7 +116,7 @@ class EmployeeMonthlySalaryRepository:
             result = (
                 db.query(
                     EmployeeDailySalary.employee_id,
-                    func.max(EmployeeDailySalary.normal_salary).label('normal_salary'),
+                    func.sum(EmployeeDailySalary.normal_salary).label('normal_salary'),
                     func.sum(EmployeeDailySalary.total_salary).label('total_monthly_salary')
                 )
                 .join(
