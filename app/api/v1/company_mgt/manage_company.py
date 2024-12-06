@@ -77,7 +77,6 @@ def get_companies(
 
 @router.get('/companies/{company_id}')
 def get_company_by_id(
-    auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
     company_id: uuid.UUID
 ):
     company = company_service.get_company(company_id)

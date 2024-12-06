@@ -72,7 +72,7 @@ def get_employee_by_id(
 
 @router.get('/employees/{company_id}')
 def get_employees_by_company_id(
-    company_id: uuid.UUID
+    company_id: uuid.UUID,
 ):
     employee = employee_service.get_employees_by_company_id(company_id)
     if employee is None:
