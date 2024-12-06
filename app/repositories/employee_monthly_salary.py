@@ -6,6 +6,7 @@ import uuid
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Query
 from app.core.database import get_session
+from app.models.employee import Employee
 from app.models.employee_daily_salary import EmployeeDailySalary
 from app.models.employee_monthly_salary import EmployeeMonthlySalary
 from app.schemas.employee_monthly_salary import CreateNewEmployeeMonthlySalary, UpdateEmployeeMonthlySalary, EmployeeMonthlySalaryFilter
@@ -21,8 +22,14 @@ class EmployeeMonthlySalaryRepository:
         return employee_monthly_salary
 
     def filtered(self, query: Query, filter: EmployeeMonthlySalaryFilter) -> Query:
+        query = query.join(Employee, EmployeeMonthlySalary.employee_id == Employee.id)
+
+        if filter.search:
+            query = query.filter(Employee.user_name.ilike(f"%{filter.search}%"))
         if filter.employee_id:
             query = query.filter(EmployeeMonthlySalary.employee_id == filter.employee_id)
+        if filter.company_id:
+            query = query.filter(Employee.company_id == filter.company_id)
         return query
 
     def get_all_filtered(self, filter: EmployeeMonthlySalaryFilter) -> List[EmployeeMonthlySalary]:

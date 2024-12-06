@@ -44,10 +44,14 @@ def get_employee_monthly_salaries(
         auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
         limit: int = 100,
         page: int = 1,
-        employee_id: Optional[str] = None
+        employee_id: Optional[str] = None,
+        q: Optional[str] = None
 ):
-    if ROLE_ADMIN in auth_user.roles or ROLE_HR in auth_user.roles:
-        _filter = EmployeeMonthlySalaryFilter(limit=limit, page=page, employee_id=employee_id)
+    if auth_user.roles and ROLE_ADMIN in auth_user.roles:
+        _filter = EmployeeMonthlySalaryFilter(limit=limit, page=page, search=q)
+    elif auth_user.roles and ROLE_HR in auth_user.roles:
+        _filter = EmployeeMonthlySalaryFilter(limit=limit, page=page, search=q, employee_id=employee_id,
+                                            company_id=auth_user.company_id)
     else:
         raise HTTPException(status_code=403, detail=ACCESS_DENIED_MSG)
 

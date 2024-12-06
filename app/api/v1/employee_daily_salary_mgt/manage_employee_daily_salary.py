@@ -1,6 +1,8 @@
 # api/v1/employee_daily_salary_mgt/manage_employee_daily_salary.py
 
 import uuid
+from re import search
+
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Optional, Annotated
 from app.schemas.employee_daily_salary import CreateNewEmployeeDailySalary, EmployeeDailySalaryFilter, UpdateEmployeeDailySalary
@@ -55,10 +57,13 @@ def get_employee_daily_salaries(
     auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
     limit: int = 100,
     page: int = 1,
-    employee_id: Optional[str] = None
+    employee_id: Optional[str] = None,
+    q: Optional[str] = None
 ):
-    if auth_user.roles and ROLE_ADMIN or ROLE_HR in auth_user.roles:
-        _filter = EmployeeDailySalaryFilter(limit=limit, page=page, employee_id=employee_id)
+    if auth_user.roles and ROLE_ADMIN in auth_user.roles:
+        _filter = EmployeeDailySalaryFilter(limit=limit, page=page, search=q)
+    elif auth_user.roles and ROLE_HR in auth_user.roles:
+        _filter = EmployeeDailySalaryFilter(limit=limit, page=page, search=q, employee_id=employee_id, company_id=auth_user.company_id)
     else:
         raise HTTPException(status_code=403, detail=ACCESS_DENIED_MSG)
 

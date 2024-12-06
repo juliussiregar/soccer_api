@@ -4,6 +4,7 @@ from typing import List, Optional
 import uuid
 from sqlalchemy.orm import Query
 from app.core.database import get_session
+from app.models.employee import Employee
 from app.models.employee_daily_salary import EmployeeDailySalary
 from app.schemas.employee_daily_salary import CreateNewEmployeeDailySalary, UpdateEmployeeDailySalary, EmployeeDailySalaryFilter
 from sqlalchemy.orm import joinedload
@@ -18,8 +19,14 @@ class EmployeeDailySalaryRepository:
         return employee_daily_salary
 
     def filtered(self, query: Query, filter: EmployeeDailySalaryFilter) -> Query:
+        query = query.join(Employee, EmployeeDailySalary.employee_id == Employee.id)
+
+        if filter.search:
+            query = query.filter(Employee.user_name.ilike(f"%{filter.search}%"))
         if filter.employee_id:
             query = query.filter(EmployeeDailySalary.employee_id == filter.employee_id)
+        if filter.company_id:
+            query = query.filter(Employee.company_id == filter.company_id)
         return query
 
     def get_all_filtered(self, filter: EmployeeDailySalaryFilter) -> List[EmployeeDailySalary]:

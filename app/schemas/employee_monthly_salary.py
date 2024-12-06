@@ -23,7 +23,9 @@ def current_jakarta_time_example() -> str:
 class EmployeeMonthlySalaryFilter(BaseModel):
     limit: Optional[int] = None
     page: Optional[int] = None
+    search: Optional[str] = None
     employee_id: Optional[uuid.UUID] = None
+    company_id: Optional[uuid.UUID] = None
 
 class SalaryRequest(BaseModel):
     month: int
