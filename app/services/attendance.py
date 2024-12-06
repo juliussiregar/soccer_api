@@ -135,7 +135,91 @@ class AttendanceService:
 
     def update_attendance(self, attendance_id: int, payload: UpdateAttendance):
         try:
-            return self.attendance_repo.update_attendance(attendance_id, payload)
+            # Ambil data attendance yang ada
+            attendance = self.attendance_repo.get_attendance_by_id(attendance_id)
+            if not attendance:
+                raise HTTPException(status_code=404, detail="Attendance not found")
+
+            company = self.company_repo.get_company_by_id(attendance.company_id)
+            if not company:
+                raise HTTPException(status_code=404, detail="Company not found")
+
+            # Hitung waktu lembur dan keterlambatan jika check_in dan check_out tersedia
+            if attendance.check_in and (payload.check_out or attendance.check_out):
+                check_in_time = attendance.check_in.astimezone(jakarta_timezone).time()
+                check_out_time = (payload.check_out or attendance.check_out).astimezone(jakarta_timezone).time()
+
+                standard_start_time = company.start_time or time(9, 0)
+                standard_end_time = company.end_time or time(17, 0)
+
+                late_minutes = 0
+                if check_in_time > standard_start_time:
+                    late_minutes = (datetime.combine(date.today(), check_in_time) -
+                                    datetime.combine(date.today(), standard_start_time)).seconds // 60
+
+                overtime_minutes = 0
+                if check_out_time > standard_end_time:
+                    overtime_minutes = (datetime.combine(date.today(), check_out_time) -
+                                        datetime.combine(date.today(), standard_end_time)).seconds // 60
+
+                # Buat deskripsi jika tidak ada
+                if not payload.description:
+                    late_hours = late_minutes // 60
+                    late_remaining_minutes = late_minutes % 60
+                    overtime_hours = overtime_minutes // 60
+                    overtime_remaining_minutes = overtime_minutes % 60
+
+                    payload.description = (
+                        f"Checked in with {late_hours} hours {late_remaining_minutes} minutes late and "
+                        f"Checked out with {overtime_hours} hours {overtime_remaining_minutes} minutes overtime."
+                    )
+                    logger.info(f"Generated description: {payload.description}")
+
+                # Isi late dan overtime jika tidak diberikan
+                if payload.late is None:
+                    payload.late = late_minutes
+                if payload.overtime is None:
+                    payload.overtime = overtime_minutes
+
+            # Perbarui data attendance
+            updated_attendance = self.attendance_repo.update_attendance(attendance_id, payload)
+
+            # Lakukan perhitungan gaji harian jika check_out diperbarui
+            if payload.check_out:
+                daily_salary = self.daily_salary_repo.get_by_employee_id(attendance.employee_id)
+                if not daily_salary:
+                    logger.warning("No daily salary configuration found for employee, skipping salary calculation.")
+                    return updated_attendance
+
+                # Hitung gaji harian
+                salary_data = self.calculate_salary_utils.calculate_daily_salary(
+                    attendance=updated_attendance,
+                    company=company,
+                    late_minutes=payload.late,
+                    daily_salary=daily_salary
+                )
+
+                # Simpan data gaji harian
+                new_salary_payload = CreateNewEmployeeDailySalary(
+                    employee_id=attendance.employee_id,
+                    work_date=attendance.check_in.date(),
+                    hours_worked=salary_data["hours_worked"],
+                    late_deduction=salary_data["late_deduction"],
+                    month=attendance.check_in.month,
+                    year=attendance.check_in.year,
+                    normal_salary=salary_data["normal_salary"],
+                    total_salary=salary_data["total_salary"],
+                )
+                existing_salary = self.employee_daily_salary_repo.get_by_employee_id_and_date(
+                    attendance.employee_id, attendance.check_in.date()
+                )
+                if not existing_salary:
+                    self.employee_daily_salary_repo.insert(new_salary_payload)
+                    logger.info("Inserted new salary data.")
+                else:
+                    logger.info("Salary data already exists, skipping insertion.")
+
+            return updated_attendance
         except Exception as err:
             logger.error(str(err))
             raise InternalErrorException("Failed to update attendance.")
