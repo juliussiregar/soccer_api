@@ -37,9 +37,10 @@ def create_application(
 
     return {"data": application}
 
-@router.post('/applications/wfh', description="Create a new WFH Application and revoke token")
+@router.post('/applications/wfh', description="Create a new WFH Application")
 def create_wfh_application(
     request_body: CreateWFHNewApplication,
+    company_id: uuid.UUID
 ):
     """
     Endpoint untuk membuat WFH Application dan menandai token lama sebagai revoked.
@@ -49,40 +50,17 @@ def create_wfh_application(
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
 
-    # Validasi token
-    token = request_body.token
-    if not token:
-        raise HTTPException(status_code=400, detail="Token is required")
-
-    try:
-        # Gunakan TokenRepository untuk memeriksa apakah token valid
-        token_repo = TokenRepository()
-        if token_repo.is_token_revoked(token):
-            raise HTTPException(status_code=401, detail="Token has already been used or is invalid")
-
-        # Decode the token
-        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
-
-        # Check company match
-        if str(payload.get("company_id")) != str(employee.company_id):
-            raise HTTPException(status_code=403, detail="Token is not valid for this employee's company")
-
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-
     # Buat aplikasi baru
     application = application_service.create_application(CreateWFHNewApplication(
+        company_id=company_id,
         employee_id=request_body.employee_id,
         location=request_body.location,
         description=request_body.description
     ))
 
-    # Tandai token sebagai revoked di database
-    token_repo.add_revoked_token(token)
-
     return {
         "data": application,
-        "message": "WFH application created successfully. This token is now invalid."
+        "message": "WFH application created successfully."
     }
 
 

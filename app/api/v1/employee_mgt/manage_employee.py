@@ -70,7 +70,15 @@ def get_employee_by_id(
 
     return {"data": employee}
 
+@router.get('/employees/{company_id}')
+def get_employees_by_company_id(
+    company_id: uuid.UUID
+):
+    employee = employee_service.get_employees_by_company_id(company_id)
+    if employee is None:
+        raise HTTPException(status_code=404, detail="Employee not found")
 
+    return {"data": employee}
 
 @router.put('/employees/{employee_id}')
 def update_employee(
