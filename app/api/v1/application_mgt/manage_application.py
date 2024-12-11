@@ -1,9 +1,11 @@
 # api/v1/application_mgt/manage_application.py
-
+import logging
 from datetime import datetime, timedelta
 import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Optional, Annotated
+
+from app.api.v1.auth.manage_auth import generate_api_token
 from app.schemas.application import CreateNewApplication, ApplicationFilter, UpdateApplication,CreateWFHNewApplication
 from app.services.application import ApplicationService
 from app.middleware.jwt import jwt_middleware, AuthUser
@@ -108,23 +110,40 @@ def update_application(
     application_id: int,
     request_body: UpdateApplication
 ):
-    application = application_service.get_application(application_id)
-    if application is None:
-        raise HTTPException(status_code=404, detail="Application not found")
+    try:
+        application = application_service.get_application(application_id)
+        if application is None:
+            raise HTTPException(status_code=404, detail="Application not found")
 
-    # Pastikan HR hanya dapat mengubah aplikasi dari company_id yang sama
-    if ROLE_HR in auth_user.roles:
-        employee = employee_service.get_employee(application.employee_id)  # Hapus uuid.UUID() di sini
-        if str(employee.company_id) != str(auth_user.company_id):
+        # Validasi HR hanya dapat mengubah aplikasi dari company_id yang sama
+        if ROLE_HR in auth_user.roles:
+            employee = employee_service.get_employee(application.employee_id)
+            if str(employee.company_id) != str(auth_user.company_id):
+                raise HTTPException(status_code=403, detail=ACCESS_DENIED_MSG)
+        elif ROLE_ADMIN not in auth_user.roles:
             raise HTTPException(status_code=403, detail=ACCESS_DENIED_MSG)
-    elif ROLE_ADMIN not in auth_user.roles:
-        raise HTTPException(status_code=403, detail=ACCESS_DENIED_MSG)
 
-    updated_application = application_service.update_application(
-        application_id=application_id,
-        payload=request_body
-    )
-    return {"data": updated_application}
+        # Panggil endpoint `/auth/api-token` untuk mendapatkan token
+        api_token_response = generate_api_token(auth_user)
+
+        # Simpan token API di variabel `generate_token`
+        generate_token = api_token_response.get("api_token")
+        if not generate_token:
+            raise HTTPException(status_code=500, detail="Failed to generate API token")
+
+        # Update aplikasi
+        updated_application = application_service.update_application(
+            application_id=application_id,
+            payload=request_body,
+            generate_token=generate_token
+        )
+
+        return {"data": updated_application}
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as exc:
+        logging.error(f"Error in update_application: {str(exc)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.delete('/applications/{application_id}')
 def delete_application(

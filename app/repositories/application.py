@@ -83,3 +83,16 @@ class ApplicationRepository:
             db.commit()
 
         return application
+
+    def get_email_by_employee_id(self, employee_id: uuid.UUID) -> Optional[str]:
+        with get_session() as db:
+            application = (
+                db.query(Application)
+                .options(joinedload(Application.employee))
+                .filter(Application.employee_id == employee_id)
+                .first()
+            )
+
+            if application and application.employee:
+                return application.employee.email
+            return None

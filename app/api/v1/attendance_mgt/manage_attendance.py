@@ -106,6 +106,50 @@ def list_attendances(
         }
     }
 
+@router.get('/attendances-dashboard', description="List all attendances with optional filtering by company_id")
+def list_attendances(
+        auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
+        limit: int = Query(default=10, description="Number of records per page"),
+        page: int = Query(default=1, description="Page number"),
+        q: Optional[str] = None
+):
+    if auth_user.roles and ROLE_ADMIN in auth_user.roles:
+        _filter = AttendanceFilter(limit=limit, page=page, search=q)
+    elif auth_user.roles and ROLE_HR in auth_user.roles:
+        _filter = AttendanceFilter(limit=limit, page=page, search=q, company_id=auth_user.company_id)
+    else:
+        raise HTTPException(status_code=403, detail="Access denied: Only ADMIN or HR roles can view attendances.")
+
+    attendances, total_records, total_pages = attendance_service.list_attendances(_filter)
+    return {
+        "success": True,
+        "data": [
+            {
+                "id": att.id,
+                "employee_id": att.employee_id,
+                "company_id": att.company_id,
+                "check_in": att.check_in,
+                "check_out": att.check_out,
+                "location": att.location,
+                "type": att.type,
+                "late": att.late,
+                "overtime": att.overtime,
+                "description": att.description,
+                "total_time": str(att.check_out - att.check_in) if att.check_out else None,
+                "created_at": att.created_at
+            }
+            for att in attendances
+        ],
+        "message": "Attendances retrieved successfully",
+        "code": 200,
+        "meta": {
+            "limit": limit,
+            "page": page,
+            "total_records": total_records,
+            "total_pages": total_pages
+        }
+    }
+
 
 @router.get('/attendances/by-date', description="Get attendances filtered by date and optional company_id")
 def get_attendance_by_date(
