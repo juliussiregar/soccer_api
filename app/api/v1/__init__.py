@@ -13,6 +13,7 @@ from app.api.v1.application_mgt import router as application_router
 from app.api.v1.attendance_mgt import router as attendance_router
 from app.api.v1.faceapi_mgt import router as faceapi_router
 from app.api.v1.face_mgt import router as face_router
+from app.api.v1.dashboard_mgt import router as dashboard_router
 
 router = APIRouter(prefix="/v1")
 router.include_router(auth_router)
@@ -27,3 +28,4 @@ router.include_router(application_router)
 router.include_router(faceapi_router)
 router.include_router(face_router)
 router.include_router(attendance_router)
+router.include_router(dashboard_router)
