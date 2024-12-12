@@ -20,6 +20,8 @@ services:
       SUBDOMAINS: api-vms,dashboard-vms
       ONLY_SUBDOMAINS: true
     restart: unless-stopped
+    networks:
+      - app_network
 
   postgres:
     image: postgres:13-alpine
@@ -31,6 +33,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
+    networks:
+      - app_network
 
   pgbouncer:
     image: edoburu/pgbouncer
@@ -42,14 +46,16 @@ services:
     depends_on:
       - postgres
     restart: unless-stopped
-    ports:
-      - "5432:5432"
+    networks:
+      - app_network
 
   redis:
     image: redis:latest
     restart: unless-stopped
     volumes:
       - redis_data:/data
+    networks:
+      - app_network
 
   celery-beat:
     image: employeeappimage
@@ -60,6 +66,8 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
     command: ["celery", "-A", "tasks", "beat", "--loglevel=info"]
     restart: unless-stopped
+    networks:
+      - app_network
 
   celery-worker:
     image: employeeappimage
@@ -70,6 +78,8 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
     command: ["celery", "-A", "tasks", "worker", "--loglevel=info"]
     restart: unless-stopped
+    networks:
+      - app_network
 
   app:
     image: employeeappimage
@@ -83,9 +93,9 @@ services:
     volumes:
       - ./../.env:/app/.env
     command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]
-    ports:
-      - "8080:80"
     restart: unless-stopped
+    networks:
+      - app_network
 
   migration:
     image: employeeappimage
@@ -98,6 +108,8 @@ services:
       TZ: Asia/Jakarta
     command: ["alembic", "upgrade", "head"]
     restart: on-failure
+    networks:
+      - app_network
 
   dashboard:
     image: attendance-dashboard
@@ -109,11 +121,15 @@ services:
       NEXT_PUBLIC_GMAPS_API_KEY: "AIzaSyAbwV5W2aFHOgIhQisaG2kaTd2xBWGuVeo"
       TZ: Asia/Jakarta
     restart: unless-stopped
-    ports:
-      - "8081:80"
+    networks:
+      - app_network
 
 volumes:
   postgres_data:
     driver: local
   redis_data:
     driver: local
+
+networks:
+  app_network:
+    driver: bridge
