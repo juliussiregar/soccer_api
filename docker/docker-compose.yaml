@@ -43,15 +43,13 @@ services:
       - postgres
     restart: unless-stopped
     ports:
-      - :5432
+      - "5432:5432"
 
   redis:
     image: redis:latest
     restart: unless-stopped
     volumes:
       - redis_data:/data
-    ports:
-      - "6379:6379"
 
   celery-beat:
     image: employeeappimage
@@ -110,12 +108,21 @@ services:
     command: ["alembic", "upgrade", "head"]
     restart: on-failure
 
+  dashboard:
+    image: attendance-dashboard
+    depends_on:
+      - app
+    environment:
+      NEXT_PUBLIC_API_URL: "http://api-vms.aluesagd.com"
+      NEXTAUTH_SECRET: "yGpO19kQvbpzawz4WI+a8ou0AES40Rr27tpLwNuh4G4="
+      NEXT_PUBLIC_GMAPS_API_KEY: "AIzaSyAbwV5W2aFHOgIhQisaG2kaTd2xBWGuVeo"
+      TZ: Asia/Jakarta
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+
 volumes:
   postgres_data:
     driver: local
   redis_data:
     driver: local
-
-networks:
-  default:
-    name: employeeapp_network
