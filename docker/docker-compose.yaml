@@ -87,15 +87,6 @@ services:
       - "8080:80"
     restart: unless-stopped
 
-  dashboard:
-    image: attendance-dashboard
-    environment:
-      NEXT_PUBLIC_API_URL: api-vms.aluesagd.com
-      TZ: Asia/Jakarta
-    restart: unless-stopped
-    ports:
-      - "8081:80"
-
   migration:
     image: employeeappimage
     depends_on:
