@@ -48,6 +48,8 @@ services:
     restart: unless-stopped
     networks:
       - app_network
+    ports:
+      - "5432:5432"
 
   redis:
     image: redis:latest
