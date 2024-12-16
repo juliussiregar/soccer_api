@@ -115,14 +115,11 @@ services:
     image: attendance-dashboard
     depends_on:
       - app
-    environment:
-      NEXT_PUBLIC_API_URL: "http://api-vms.aluesagd.com"
-      NEXTAUTH_SECRET: "yGpO19kQvbpzawz4WI+a8ou0AES40Rr27tpLwNuh4G4="
-      NEXT_PUBLIC_GMAPS_API_KEY: "AIzaSyAbwV5W2aFHOgIhQisaG2kaTd2xBWGuVeo"
-      TZ: Asia/Jakarta
     restart: unless-stopped
     networks:
       - app_network
+    ports:
+      - "3000:3000"
 
 volumes:
   postgres_data:
