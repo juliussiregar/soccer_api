@@ -32,10 +32,10 @@ services:
       POSTGRES_DB: employeeapp
       PGPORT: 54329
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - attendance_postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
     ports:
-      - "54329:54329"  
+      - "54329:54329"
     networks:
       - app_network
 
@@ -59,7 +59,7 @@ services:
     image: redis:latest
     restart: unless-stopped
     volumes:
-      - redis_data:/data
+      - attendance_redis_data:/data
     networks:
       - app_network
 
@@ -128,9 +128,9 @@ services:
       - "3000:3000"
 
 volumes:
-  postgres_data:
+  attendance_postgres_data:
     driver: local
-  redis_data:
+  attendance_redis_data:
     driver: local
 
 networks:
