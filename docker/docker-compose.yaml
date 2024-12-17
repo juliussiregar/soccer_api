@@ -30,12 +30,12 @@ services:
       POSTGRES_USER: employeeapp
       POSTGRES_PASSWORD: aluesa123
       POSTGRES_DB: employeeapp
-      PGPORT: 54323
+      PGPORT: 54329
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
     ports:
-      - "54323:54323"  
+      - "54329:54329"  
     networks:
       - app_network
 
@@ -46,12 +46,12 @@ services:
       DB_PASSWORD: aluesa123
       DB_HOST: postgres
       DB_NAME: employeeapp
-      DB_PORT: 54323
+      DB_PORT: 54329
     depends_on:
       - postgres
     restart: unless-stopped
     ports:
-      - "54323:5432"  
+      - "54329:5432"  
     networks:
       - app_network
 
