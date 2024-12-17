@@ -30,12 +30,12 @@ services:
       POSTGRES_USER: employeeapp
       POSTGRES_PASSWORD: aluesa123
       POSTGRES_DB: employeeapp
-      PGPORT: 54322
+      PGPORT: 54323
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
     ports:
-      - "54322:54322"  # Port PostgreSQL diubah ke 54322
+      - "54323:54323"  
     networks:
       - app_network
 
@@ -46,12 +46,12 @@ services:
       DB_PASSWORD: aluesa123
       DB_HOST: postgres
       DB_NAME: employeeapp
-      DB_PORT: 54322  # Terhubung ke PostgreSQL di port 54322
+      DB_PORT: 54323
     depends_on:
       - postgres
     restart: unless-stopped
     ports:
-      - "54322:5432"  # PgBouncer mengekspos port 54322 di host
+      - "54323:5432"  
     networks:
       - app_network
 
