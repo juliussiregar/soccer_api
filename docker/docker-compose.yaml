@@ -33,8 +33,6 @@ services:
     volumes:
       - attendance_postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
-    ports:
-      - "54329:5432"
     networks:
       - app_network
 
@@ -50,7 +48,7 @@ services:
       - postgres
     restart: unless-stopped
     ports:
-      - "54330:5432"
+      - "127.0.0.1:54322:5432"
     networks:
       - app_network
 
@@ -89,7 +87,6 @@ services:
   app:
     image: employeeappimage
     depends_on:
-      - postgres
       - pgbouncer
       - redis
     environment:
@@ -99,6 +96,8 @@ services:
       - ./../.env:/app/.env
     command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]
     restart: unless-stopped
+    ports:
+      - ":80"
     networks:
       - app_network
 
@@ -112,7 +111,7 @@ services:
     environment:
       TZ: Asia/Jakarta
     command: ["alembic", "upgrade", "head"]
-    restart: on-failure
+    restart: no
     networks:
       - app_network
 
@@ -121,10 +120,10 @@ services:
     depends_on:
       - app
     restart: unless-stopped
+    ports:
+      - ":3000"
     networks:
       - app_network
-    ports:
-      - "3000:3000"
 
 volumes:
   attendance_postgres_data:
