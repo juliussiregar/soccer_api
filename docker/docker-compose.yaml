@@ -48,8 +48,11 @@ services:
       - postgres
     restart: unless-stopped
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     ports:
       - "127.0.0.1:54322:5432"
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
     networks:
@@ -63,6 +66,9 @@ services:
       - attendance_redis_data:/data
 =======
       - redis_data:/data
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
     networks:
       - app_network
@@ -104,8 +110,11 @@ services:
     command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]
     restart: unless-stopped
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     ports:
       - ":80"
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
     networks:
@@ -125,6 +134,9 @@ services:
     restart: no
 =======
     restart: on-failure
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
     networks:
       - app_network
@@ -135,8 +147,11 @@ services:
       - app
     restart: unless-stopped
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     ports:
       - ":3000"
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
     networks:
@@ -151,7 +166,11 @@ volumes:
 networks:
   app_network:
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     driver: bridge
+=======
+    driver: bridge
+>>>>>>> Stashed changes
 =======
     driver: bridge
 >>>>>>> Stashed changes
