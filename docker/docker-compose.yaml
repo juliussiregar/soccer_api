@@ -35,6 +35,8 @@ services:
     restart: unless-stopped
     networks:
       - app_network
+    profiles:
+      - database
 
   pgbouncer:
     image: edoburu/pgbouncer
@@ -47,29 +49,18 @@ services:
     depends_on:
       - postgres
     restart: unless-stopped
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
     ports:
       - "127.0.0.1:54322:5432"
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
     networks:
       - app_network
+    profiles:
+      - database
 
   redis:
     image: redis:latest
     restart: unless-stopped
     volumes:
-<<<<<<< Updated upstream
       - attendance_redis_data:/data
-=======
-      - redis_data:/data
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
     networks:
       - app_network
 
@@ -84,6 +75,8 @@ services:
     restart: unless-stopped
     networks:
       - app_network
+    profiles:
+      - network
 
   celery-worker:
     image: employeeappimage
@@ -96,6 +89,8 @@ services:
     restart: unless-stopped
     networks:
       - app_network
+    profiles:
+      - network
 
   app:
     image: employeeappimage
@@ -109,16 +104,12 @@ services:
       - ./../.env:/app/.env
     command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]
     restart: unless-stopped
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
     ports:
       - ":80"
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
     networks:
       - app_network
+    profiles:
+      - app
 
   migration:
     image: employeeappimage
@@ -130,14 +121,7 @@ services:
     environment:
       TZ: Asia/Jakarta
     command: ["alembic", "upgrade", "head"]
-<<<<<<< Updated upstream
     restart: no
-=======
-    restart: on-failure
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
     networks:
       - app_network
 
@@ -146,16 +130,12 @@ services:
     depends_on:
       - app
     restart: unless-stopped
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
     ports:
       - ":3000"
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
     networks:
       - app_network
+    profiles:
+      - network
 
 volumes:
   attendance_postgres_data:
@@ -165,12 +145,5 @@ volumes:
 
 networks:
   app_network:
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
     driver: bridge
-=======
-    driver: bridge
->>>>>>> Stashed changes
-=======
-    driver: bridge
->>>>>>> Stashed changes
+
