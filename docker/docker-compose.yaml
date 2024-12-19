@@ -124,6 +124,8 @@ services:
     restart: no
     networks:
       - app_network
+    profiles:
+      - database
 
   dashboard:
     image: attendance-dashboard
