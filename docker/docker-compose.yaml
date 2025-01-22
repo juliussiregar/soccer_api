@@ -1,87 +1,39 @@
 version: "3.8"
 
 services:
-  nginx:
-      image: linuxserver/swag
-      cap_add:
-        - NET_ADMIN
-      ports:
-        - "80:80"
-        - "443:443"
-      volumes:
-        - ./nginx:/config/nginx
-        - ./../uploads:/uploads
-      environment:
-        PUID: 1003
-        PGID: 1003
-        TZ: Asia/Jakarta
-        URL: aluesagd.com
-        VALIDATION: http
-        SUBDOMAINS: api-vms,dashboard-vms	
-        ONLY_SUBDOMAINS: true
-        restart: unless-stopped
-
-  postgres:
+  postgres_soccer:
     image: postgres:13-alpine
     environment:
       TZ: Asia/Jakarta
-      POSTGRES_USER: visitorapp
-      POSTGRES_PASSWORD: visitorapp1
-      POSTGRES_DB: visitorapp
+      POSTGRES_USER: appsoccer
+      POSTGRES_PASSWORD: admin123
+      POSTGRES_DB: appsoccer
+      PGPORT: 5433  
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
+    ports:
+      - "5433:5433" 
 
-  pgbouncer:
+  pgbouncer_cinema:
     image: edoburu/pgbouncer
     environment:
-      DB_USER: visitorapp
-      DB_PASSWORD: visitorapp1
-      DB_HOST: postgres
-      DB_NAME: visitorapp
+      DB_USER: appsoccer
+      DB_PASSWORD: admin123
+      DB_HOST: postgres_soccer
+      DB_NAME: appsoccer
+      DB_PORT: 54333  
     depends_on:
-      - postgres
+      - postgres_cinema
     restart: unless-stopped
     ports:
-      - :5432
-
-  dashboard:
-    image: visitorms-dashboard
-    depends_on:
-      - app
-    environment:
-      REACT_APP_API_URL: api-vms.aluesagd.com
-      TZ: Asia/Jakarta
-    restart: unless-stopped
-    ports:
-      - 8081:80
-
-  app:
-    image: visitorappimage
-    depends_on:
-      - postgres
-      - pgbouncer
-    environment:
-      TZ: Asia/Jakarta
-    volumes:
-      - ./../.env:/app/.env
-    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]
-    ports:
-      - 8080:80
-    restart: unless-stopped
-
-  migration:
-    image: visitorappimage
-    depends_on:
-      - postgres
-      - pgbouncer
-    volumes:
-      - ./../.env:/app/.env
-    environment:
-      TZ: Asia/Jakarta
-    command: ["alembic", "upgrade", "head"]
-    restart: on-failure
+      - "54333:5432"  
 
 volumes:
-  postgres_data:
+  attendance_postgres_data:
     driver: local
+
+networks:
+  app_network:
+    driver: bridge
+

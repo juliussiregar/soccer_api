@@ -6,7 +6,7 @@ from app.core.config import settings
 from app.middleware.log import LogMiddleware
 from app.utils.exception import CustomException
 
-from app.api.health import router as router_health
+from app.api.test import router as router_health
 from app.api.v1 import router as v1_router
 
 app = FastAPI(

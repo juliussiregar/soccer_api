@@ -1,47 +1,52 @@
 from datetime import datetime, timedelta
 from jose import jwt
-
-from app.repositories.user import UserRepository
-from app.core.constants.auth import JWT_TOKEN_EXPIRE_IN_MIN
+from app.repositories.auth import AuthRepository
 from app.utils.exception import UnauthorizedException
+from app.core.constants.auth import JWT_TOKEN_EXPIRE_IN_MIN
 from app.core.config import settings
-
-from app.core.constants.auth import ROLE_ADMIN
+from app.schemas.user_mgt import AuthUser
+import logging
+from sqlalchemy.orm import joinedload
 
 
 class AuthService:
     def __init__(self) -> None:
-        self.user_repo = UserRepository()
+        self.auth_repo = AuthRepository()
 
-    def generate_token(self, username: str, password: str) -> str:
-        user = self.user_repo.find_by_username(username)
-
-        if user is None:
-            raise UnauthorizedException("invalid credentials")
-
-        pass_is_valid = self.user_repo.verify_password(password, user.password)
-        if not pass_is_valid:
-            raise UnauthorizedException("invalid credentials")
+    def generate_token(self, identifier: str, password: str) -> str:
+        user = self.auth_repo.find_by_username_or_email(identifier)
+        if user is None or not self.auth_repo.verify_password(password, user.password):
+            raise UnauthorizedException("Invalid credentials")
 
         expire = datetime.utcnow() + timedelta(minutes=JWT_TOKEN_EXPIRE_IN_MIN)
-        encode = {"sub": user.username, "id": user.id, "exp": expire}
+        encode = {
+            "id": user.id,
+            "full_name": user.full_name,
+            "roles": [role.name for role in user.roles],
+            "exp": expire
+        }
+        return jwt.encode(encode, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
-        access_token = jwt.encode(
-            encode, settings.jwt_secret, algorithm=settings.jwt_algorithm
-        )
+    def get_user_details(self, user_id: int) -> AuthUser:
+        try:
+            # Panggil find_by_id tanpa .options(joinedload(User.roles))
+            user = self.auth_repo.find_by_id(user_id)
 
-        return access_token
+            if user is None:
+                raise UnauthorizedException("User not found")
 
-    def has_role(self, user_id: int, role_name: str) -> None:
-        if not self.user_repo.has_role(user_id, role_name):
-            if not self.user_repo.has_role(user_id, ROLE_ADMIN):
-                raise UnauthorizedException(f"only {role_name} can perform this action")
-
-
-    def user_exists(self, user_id: int) -> None:
-        if self.user_repo.find_by_id(user_id) is None:
-            raise UnauthorizedException(f"User id: {user_id} Not found")
-            
-    # def has_role_peserta (self, user_id : int, role_name: str) -> None:
-    #     if not self.user_repo.has_role (user_id, role_name):
-    #         raise UnauthorizedException(f"only {role_name} can perform this action")
+            user_data = AuthUser(
+                id=user.id,
+                full_name=user.full_name,
+                username=user.username,
+                email=user.email,
+                created_at=user.created_at,
+                updated_at=user.updated_at,
+                deleted_at=user.deleted_at,
+                roles=[role.name for role in user.roles]  # Dapatkan nama roles
+            )
+            logging.info(f"User details: {user_data}")
+            return user_data
+        except Exception as e:
+            logging.error(f"Error in get_user_details: {e}")
+            raise

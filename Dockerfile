@@ -29,7 +29,7 @@ ENV PIP_DEFAULT_TIMEOUT=100
 RUN pip install --no-cache-dir dlib==19.24.6
 
 # Compile Python source files into byte code and then delete the original source files
-RUN python -m compileall -b . && find * | grep '\.py$' | xargs rm
+RUN python -m compileall -b . && find * | grep '\.py$' | grep -v 'alembic' | xargs rm
 
 # Set the environment variables
 ARG VERSION
