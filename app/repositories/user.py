@@ -1,4 +1,5 @@
-from typing import List, Tuple
+import logging
+from typing import List, Optional, Tuple
 from passlib.context import CryptContext
 from sqlalchemy.orm import Query, joinedload
 from sqlalchemy import insert, delete
@@ -63,33 +64,41 @@ class UserRepository:
         return False
 
     def filtered(self, query: Query, filter: UserFilter) -> Query:
-        if filter.search is not None:
-            query = query.filter(User.username == filter.search)
-            # TODO: Add other columns to search
-
+    # Filter pencarian berdasarkan full_name (query string `q`)
+        if filter.search:
+            query = query.filter(User.full_name.ilike(f"%{filter.search}%"))  
+            logging.info(f"Filtered query applied with search: {filter.search}")
         return query
 
 
-    # def get_all_filtered(self, filter: UserFilter) -> List[User]:
-    #     with get_session() as db:
-    #         query = db.query(User).join(User.company).options(joinedload(User.company))
+    def get_all_filtered(self, filter: Optional[UserFilter] = None) -> List[User]:
+        with get_session() as db:
+            query = db.query(User)
 
-    #         # Filter based on the provided filters
-    #         query = self.filtered(query, filter)
+            # Include users with null deleted_at
+            query = query.filter(User.deleted_at.is_(None))
 
-    #         # Include users with null deleted_at
-    #         query = query.filter(User.deleted_at.is_(None))
+            # Order by creation date
+            query = query.order_by(User.created_at.desc())
 
-    #         query = query.order_by(User.created_at.desc())
+            # Default pagination settings
+            default_limit = 20
+            default_page = 1
 
-    #         if filter.limit is not None:
-    #             query = query.limit(filter.limit)
+            # Apply limit and offset based on filter or default values
+            limit = default_limit
+            page = default_page
 
-    #         if filter.page is not None and filter.limit is not None:
-    #             offset = (filter.page - 1) * filter.limit
-    #             query = query.offset(offset)
+            if filter is not None:
+                limit = filter.limit if filter.limit is not None else default_limit
+                page = filter.page if filter.page is not None else default_page
 
-    #         return query.options(joinedload(User.roles)).all()
+            query = query.limit(limit)
+            offset = (page - 1) * limit
+            query = query.offset(offset)
+
+            return query.options(joinedload(User.roles)).all()
+
 
 
 

@@ -5,22 +5,20 @@ from datetime import datetime
 from typing import List, Optional  # Pastikan List diimpor dari typing
 
 class UserFilter(BaseModel):
-    limit: Optional[int] = None
-    page: Optional[int] = None
-    search: Optional[str] = None
-
+    limit: Optional[int] = 20  # Default limit
+    page: Optional[int] = 1  # Default page
+    search: Optional[str] = None  # Query pencarian full_name
 
 class UserCreate(BaseModel):
     full_name: str
     username: str
     password: str
     email: Optional[str] = None
-    role: Optional[str] = None
-
+    role: str
 
 class UserUpdate(BaseModel):
-    full_name: str
-    username: str
+    full_name: Optional[str] = None
+    username: Optional[str] = None
     password: Optional[str] = None
     email: Optional[str] = None
     role: Optional[str] = None
