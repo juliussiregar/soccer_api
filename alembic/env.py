@@ -41,7 +41,7 @@ target_metadata = [Base.metadata]
 # ... etc.
 ### Local
 
-Localdb = 'postgresql+psycopg2://soccerapp:admin123@127.0.0.1:5432/soccerapp'
+Localdb = 'postgresql+psycopg2://appsoccer:admin123@127.0.0.1:54355/appsoccer'
 
 config.set_main_option(
     "sqlalchemy.url",

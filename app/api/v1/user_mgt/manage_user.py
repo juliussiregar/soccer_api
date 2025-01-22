@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Optional, Annotated
 
-from app.schemas.user_mgt import UserCreate, UserUpdate, RegisterUpdate
+from app.schemas.user_mgt import UserCreate, UserUpdate, RegisterUpdate, UserFilter
 
 from app.middleware.jwt import jwt_middleware, AuthUser
 from app.core.constants.auth import ROLE_ADMIN
@@ -17,12 +17,15 @@ user_service = UserService()
 @router.get("/user", description="For user management")
 def user_list(
     auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
-    limit: int = 100,
-    page: int = 1,
-    q: Optional[str] = None,
+    limit: int = 20,  # Default limit jika tidak diberikan
+    page: int = 1,  # Default page jika tidak diberikan
+    q: Optional[str] = None,  # Query untuk pencarian full_name
 ):
-    # Cek apakah role pengguna adalah ADMIN atau HR
-    users, total_rows, total_pages = user_service.list()
+    # Buat filter berdasarkan parameter
+    filter = UserFilter(limit=limit, page=page, search=q)
+
+    # Ambil data user menggunakan filter
+    users, total_rows, total_pages = user_service.list(filter)
 
     return {
         "data": [
@@ -90,7 +93,6 @@ def user_update(
             "id": user.id,
             "full_name": user.full_name,
             "username": user.username,
-            "roles": [body.role],
             "created_at": user.created_at,
             "updated_at": user.updated_at,
         },

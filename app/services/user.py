@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 from app.models.role import Role
 from app.models.user import User
 from app.repositories.role import RoleRepository
@@ -18,13 +18,21 @@ class UserService:
         self.user_repo = UserRepository(user_repo=self, role_repo=self.role_repo)
 
 
-    def list(self, filter: UserFilter) -> Tuple[List[User], int, int]:
+    def list(self, filter: Optional[UserFilter] = None) -> Tuple[List[User], int, int]:
+        if filter is None:
+            filter = UserFilter(limit=20, page=1)  # Default values if filter is not provided
+
+        # Get filtered users
         users = self.user_repo.get_all_filtered(filter)
 
+        # Count total rows
         total_rows = self.user_repo.count_by_filter(filter)
+
+        # Calculate total pages
         total_pages = (total_rows + filter.limit - 1) // filter.limit
 
         return users, total_rows, total_pages
+
 
 
     def create(self, payload: UserCreate) -> User:
@@ -37,9 +45,6 @@ class UserService:
             is_email_exists = self.user_repo.is_username_used(payload.email)
             if is_email_exists:
                 raise UnprocessableException("email already used")
-
-        if payload.role is None:
-            payload.role = "HR"
 
         is_role_exists = self.role_repo.find_by_name(payload.role)
         if not is_role_exists:
