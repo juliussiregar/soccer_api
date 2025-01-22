@@ -70,26 +70,26 @@ class UserRepository:
         return query
 
 
-    def get_all_filtered(self, filter: UserFilter) -> List[User]:
-        with get_session() as db:
-            query = db.query(User).join(User.company).options(joinedload(User.company))
+    # def get_all_filtered(self, filter: UserFilter) -> List[User]:
+    #     with get_session() as db:
+    #         query = db.query(User).join(User.company).options(joinedload(User.company))
 
-            # Filter based on the provided filters
-            query = self.filtered(query, filter)
+    #         # Filter based on the provided filters
+    #         query = self.filtered(query, filter)
 
-            # Include users with null deleted_at
-            query = query.filter(User.deleted_at.is_(None))
+    #         # Include users with null deleted_at
+    #         query = query.filter(User.deleted_at.is_(None))
 
-            query = query.order_by(User.created_at.desc())
+    #         query = query.order_by(User.created_at.desc())
 
-            if filter.limit is not None:
-                query = query.limit(filter.limit)
+    #         if filter.limit is not None:
+    #             query = query.limit(filter.limit)
 
-            if filter.page is not None and filter.limit is not None:
-                offset = (filter.page - 1) * filter.limit
-                query = query.offset(offset)
+    #         if filter.page is not None and filter.limit is not None:
+    #             offset = (filter.page - 1) * filter.limit
+    #             query = query.offset(offset)
 
-            return query.options(joinedload(User.roles)).all()
+    #         return query.options(joinedload(User.roles)).all()
 
 
 
@@ -110,7 +110,6 @@ class UserRepository:
 
     def insert(self, payload: UserCreate) -> User:
         user = User()
-        user.company_id = payload.company_id
         user.username = payload.username
 
         user.full_name = payload.full_name
@@ -149,8 +148,6 @@ class UserRepository:
                 return None
 
             # Update basic user information
-            if payload.company_id:
-                user.company_id = payload.company_id
             if payload.username:
                 user.username = payload.username
             if payload.full_name:

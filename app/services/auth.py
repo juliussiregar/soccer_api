@@ -21,10 +21,8 @@ class AuthService:
         expire = datetime.utcnow() + timedelta(minutes=JWT_TOKEN_EXPIRE_IN_MIN)
         encode = {
             "id": user.id,
-            "company_id": str(user.company_id),
             "full_name": user.full_name,
             "roles": [role.name for role in user.roles],
-            "company_name": user.company.name,
             "exp": expire
         }
         return jwt.encode(encode, settings.jwt_secret, algorithm=settings.jwt_algorithm)
@@ -39,14 +37,12 @@ class AuthService:
 
             user_data = AuthUser(
                 id=user.id,
-                company_id=str(user.company_id),
                 full_name=user.full_name,
                 username=user.username,
                 email=user.email,
                 created_at=user.created_at,
                 updated_at=user.updated_at,
                 deleted_at=user.deleted_at,
-                created_by=user.created_by,
                 roles=[role.name for role in user.roles]  # Dapatkan nama roles
             )
             logging.info(f"User details: {user_data}")

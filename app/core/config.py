@@ -20,9 +20,6 @@ class Settings(BaseSettings):
     postgres_port: str
     database_uri: Optional[PostgresDsn] = None
 
-    celery_broker_url: str
-    celery_result_backend: str
-
     jwt_secret: str
     jwt_algorithm: str
 
@@ -30,9 +27,6 @@ class Settings(BaseSettings):
     mailgun_url: str
     mailgun_domain: str
     mailgun_from: str
-
-    risetai_url: str
-    risetai_token: str
 
     app_version: str = DEFAULT_APP_VERSION
 

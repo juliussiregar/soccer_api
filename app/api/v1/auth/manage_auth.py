@@ -53,12 +53,10 @@ def generate_api_token(auth_user: AuthUser = Depends(jwt_middleware)):
         # Generate payload menggunakan data dari `auth_user`
         payload = {
             "id": auth_user.id,
-            "company_id": auth_user.company_id,
             "full_name": auth_user.full_name,
             "username": auth_user.username,
             "email": auth_user.email,
             "roles": auth_user.roles,
-            "company_name": getattr(auth_user, "company_name", "Unknown Company"),
             "exp": int(expire.timestamp()),  # Expiration as Unix timestamp
             "expires": expire.isoformat()    # ISO format for human-readable expiration
         }

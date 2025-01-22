@@ -30,14 +30,12 @@ class JwtMiddleware:
 
             auth_user = AuthUser(
                 id=payload.get("id"),
-                company_id=payload.get("company_id"),
                 full_name=payload.get("full_name"),
                 username=payload.get("username", ""),
                 email=payload.get("email", ""),
                 created_at=payload.get("created_at", datetime.now(timezone.utc)),
                 updated_at=payload.get("updated_at"),
                 deleted_at=payload.get("deleted_at"),
-                created_by=payload.get("created_by"),
                 roles=payload.get("roles", [])
             )
             return auth_user

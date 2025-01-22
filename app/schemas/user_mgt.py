@@ -11,7 +11,6 @@ class UserFilter(BaseModel):
 
 
 class UserCreate(BaseModel):
-    company_id: UUID
     full_name: str
     username: str
     password: str
@@ -20,7 +19,6 @@ class UserCreate(BaseModel):
 
 
 class UserUpdate(BaseModel):
-    company_id: UUID
     full_name: str
     username: str
     password: Optional[str] = None
@@ -46,13 +44,11 @@ class PasswordUpdate(BaseModel):
 
 class AuthUser(BaseModel):
     id: int
-    company_id: str
     full_name: str
     username: str
     email: str
     created_at: datetime
     updated_at: Optional[datetime] = None
     deleted_at: Optional[datetime] = None
-    created_by: Optional[int] = None
     roles: Optional[List[str]] = []  # Menambahkan atribut roles yang berisi list role
 

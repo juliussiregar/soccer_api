@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import Optional, Annotated
 
 from app.schemas.user_mgt import UserCreate, UserUpdate, RegisterUpdate
-from app.schemas.position import PositionFilter
 
 from app.middleware.jwt import jwt_middleware, AuthUser
 from app.core.constants.auth import ROLE_ADMIN
@@ -23,19 +22,12 @@ def user_list(
     q: Optional[str] = None,
 ):
     # Cek apakah role pengguna adalah ADMIN atau HR
-    if auth_user.roles and ROLE_ADMIN in auth_user.roles:
-        _filter = PositionFilter(limit=limit, page=page, search=q)
-    else:
-        raise HTTPException(status_code=403, detail="Access denied for this role")
-
-    users, total_rows, total_pages = user_service.list(_filter)
+    users, total_rows, total_pages = user_service.list()
 
     return {
         "data": [
             {
                 "id": user.id,
-                "company_id": user.company_id,
-                "company_name": user.company.name,  # Tambahkan nama perusahaan
                 "full_name": user.full_name,
                 "username": user.username,
                 "roles": [role.name for role in user.roles],
@@ -70,7 +62,6 @@ def user_create(
     return {
         "data": {
             "id": user.id,
-            "company_id": user.company_id,
             "full_name": user.full_name,
             "username": user.username,
             "roles": [body.role],
@@ -97,7 +88,6 @@ def user_update(
     return {
         "data": {
             "id": user.id,
-            "company_id": user.company_id,
             "full_name": user.full_name,
             "username": user.username,
             "roles": [body.role],
