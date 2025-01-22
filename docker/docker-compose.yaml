@@ -8,32 +8,39 @@ services:
       POSTGRES_USER: appsoccer
       POSTGRES_PASSWORD: admin123
       POSTGRES_DB: appsoccer
-      PGPORT: 5433  
+      PGPORT: 5433
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_soccer_data:/var/lib/postgresql/data
     restart: unless-stopped
     ports:
-      - "5433:5433" 
+      - "5433:5433"
+    networks:
+      - app_network
+    profiles:
+      - soccer_database
 
-  pgbouncer_cinema:
+  pgbouncer_soccer:
     image: edoburu/pgbouncer
     environment:
       DB_USER: appsoccer
       DB_PASSWORD: admin123
       DB_HOST: postgres_soccer
       DB_NAME: appsoccer
-      DB_PORT: 54333  
+      DB_PORT: 5433
     depends_on:
-      - postgres_cinema
+      - postgres_soccer
     restart: unless-stopped
     ports:
-      - "54333:5432"  
+      - "54333:5432"
+    networks:
+      - app_network
+    profiles:
+      - soccer_database
 
 volumes:
-  attendance_postgres_data:
+  postgres_soccer_data:
     driver: local
 
 networks:
   app_network:
     driver: bridge
-
