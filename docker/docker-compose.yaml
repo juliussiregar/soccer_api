@@ -1,152 +1,36 @@
 version: "3.8"
 
 services:
-  nginx:
-    image: linuxserver/swag
-    cap_add:
-      - NET_ADMIN
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx:/config/nginx
-      - ./../uploads:/uploads
-    environment:
-      PUID: 1003
-      PGID: 1003
-      TZ: Asia/Jakarta
-      URL: aluesagd.com
-      VALIDATION: http
-      SUBDOMAINS: api-vms,dashboard-vms
-      ONLY_SUBDOMAINS: true
-    restart: unless-stopped
-    networks:
-      - app_network
-    profiles:
-      - nginx
-
-  postgres:
+  postgres_soccer:
     image: postgres:13-alpine
     environment:
       TZ: Asia/Jakarta
-      POSTGRES_USER: employeeapp
-      POSTGRES_PASSWORD: aluesa123
-      POSTGRES_DB: employeeapp
+      POSTGRES_USER: appsoccer
+      POSTGRES_PASSWORD: admin123
+      POSTGRES_DB: appsoccer
+      PGPORT: 5433  
     volumes:
-      - attendance_postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
-    networks:
-      - app_network
-    profiles:
-      - app
+    ports:
+      - "5433:5433" 
 
-  pgbouncer:
+  pgbouncer_cinema:
     image: edoburu/pgbouncer
     environment:
-      DB_USER: employeeapp
-      DB_PASSWORD: aluesa123
-      DB_HOST: postgres
-      DB_NAME: employeeapp
-      DB_PORT: 5432
+      DB_USER: appsoccer
+      DB_PASSWORD: admin123
+      DB_HOST: postgres_soccer
+      DB_NAME: appsoccer
+      DB_PORT: 54333  
     depends_on:
-      - postgres
+      - postgres_cinema
     restart: unless-stopped
     ports:
-      - "54330:5432"
-    networks:
-      - app_network
-    profiles:
-      - app
-
-  redis:
-    image: redis:latest
-    restart: unless-stopped
-    volumes:
-      - attendance_redis_data:/data
-    networks:
-      - app_network
-    profiles:
-      - app
-
-  celery-beat:
-    image: employeeappimage
-    depends_on:
-      - redis
-      - app
-    environment:
-      CELERY_BROKER_URL: redis://redis:6379/0
-    command: ["celery", "-A", "tasks", "beat", "--loglevel=info"]
-    restart: unless-stopped
-    networks:
-      - app_network
-    profiles:
-      - app
-
-  celery-worker:
-    image: employeeappimage
-    depends_on:
-      - redis
-      - app
-    environment:
-      CELERY_BROKER_URL: redis://redis:6379/0
-    command: ["celery", "-A", "tasks", "worker", "--loglevel=info"]
-    restart: unless-stopped
-    networks:
-      - app_network
-    profiles:
-      - app
-
-  app:
-    image: employeeappimage
-    depends_on:
-      - pgbouncer
-      - redis
-    environment:
-      TZ: Asia/Jakarta
-      CELERY_BROKER_URL: redis://redis:6379/0
-    volumes:
-      - ./../.env:/app/.env
-    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]
-    restart: unless-stopped
-    ports:
-      - ":80"
-    networks:
-      - app_network
-    profiles:
-      - app
-
-  migration:
-    image: employeeappimage
-    depends_on:
-      - postgres
-      - pgbouncer
-    volumes:
-      - ./../.env:/app/.env
-    environment:
-      TZ: Asia/Jakarta
-    command: ["alembic", "upgrade", "head"]
-    restart: no
-    networks:
-      - app_network
-    profiles:
-      - app
-
-  dashboard:
-    image: attendance-dashboard
-    depends_on:
-      - app
-    restart: unless-stopped
-    ports:
-      - ":3000"
-    networks:
-      - app_network
-    profiles:
-      - app
+      - "54333:5432"  
 
 volumes:
   attendance_postgres_data:
-    driver: local
-  attendance_redis_data:
     driver: local
 
 networks:
