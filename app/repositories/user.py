@@ -1,21 +1,25 @@
-from typing import List, Tuple
+import logging
+from typing import List, Optional, Tuple
 from passlib.context import CryptContext
 from sqlalchemy.orm import Query, joinedload
-from sqlalchemy import insert
+from sqlalchemy import insert, delete
 
 from app.core.database import get_session
 from app.models.user import User
+from app.repositories.role import RoleRepository
 from app.utils.date import get_now
 from app.models.role import Role, user_role_association
-from app.utils.etc import id_generator
 
-from app.utils.exception import UnprocessableException
-from app.schemas.user_mgt import UserCreate, UserUpdate, UserFilter, RekanRegister, RegisterUpdate,PasswordUpdate
+from app.schemas.user_mgt import UserCreate, UserUpdate, UserFilter, RegisterUpdate,PasswordUpdate
 
 bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 class UserRepository:
+    def __init__(self, user_repo: 'UserRepository', role_repo: 'RoleRepository') -> None:
+        self.user_repo = user_repo
+        self.role_repo = role_repo
+
     def find_by_id(self, id: int) -> User | None:
         with get_session() as db:
             return (
@@ -60,34 +64,53 @@ class UserRepository:
         return False
 
     def filtered(self, query: Query, filter: UserFilter) -> Query:
-        if filter.search is not None:
-            query = query.filter(User.username == filter.search)
-            # TODO: Add other columns to search
-
+    # Filter pencarian berdasarkan full_name (query string `q`)
+        if filter.search:
+            query = query.filter(User.full_name.ilike(f"%{filter.search}%"))  
+            logging.info(f"Filtered query applied with search: {filter.search}")
         return query
 
 
-    def get_all_filtered(self, filter: UserFilter) -> List[User]:
+    def get_all_filtered(self, filter: Optional[UserFilter] = None) -> List[User]:
         with get_session() as db:
             query = db.query(User)
 
-            query = self.filtered(query, filter).order_by(User.created_at.desc())
+            # Include users with null deleted_at
+            query = query.filter(User.deleted_at.is_(None))
 
-            if filter.limit is not None:
-                query = query.limit(filter.limit)
+            # Order by creation date
+            query = query.order_by(User.created_at.desc())
 
-            if filter.page is not None and filter.limit is not None:
-                offset = (filter.page - 1) * filter.limit
-                query = query.offset(offset)
+            # Default pagination settings
+            default_limit = 20
+            default_page = 1
+
+            # Apply limit and offset based on filter or default values
+            limit = default_limit
+            page = default_page
+
+            if filter is not None:
+                limit = filter.limit if filter.limit is not None else default_limit
+                page = filter.page if filter.page is not None else default_page
+
+            query = query.limit(limit)
+            offset = (page - 1) * limit
+            query = query.offset(offset)
 
             return query.options(joinedload(User.roles)).all()
+
+
 
 
     def count_by_filter(self, filter: UserFilter) -> int:
         with get_session() as db:
             query = db.query(User)
 
+            # Filter based on the provided filters
             query = self.filtered(query, filter)
+
+            # Include users with null deleted_at
+            query = query.filter(User.deleted_at.is_(None))
 
             return query.count()
 
@@ -127,6 +150,45 @@ class UserRepository:
 
         return user
 
+    def update(self, user_id: int, payload: UserUpdate) -> User | None:
+        with get_session() as db:
+            user = db.query(User).filter(User.id == user_id).first()
+            if not user:
+                return None
+
+            # Update basic user information
+            if payload.username:
+                user.username = payload.username
+            if payload.full_name:
+                user.full_name = payload.full_name
+            if payload.email:
+                user.email = payload.email
+            if payload.password:
+                user.password = self.password_hash(payload.password)
+
+            user.updated_at = get_now()
+
+            # Handle role update if provided
+            if payload.role:
+                role = db.query(Role).filter(Role.name == payload.role).first()
+                if role:
+                    # Remove existing roles
+                    db.execute(
+                        delete(user_role_association).where(
+                            user_role_association.c.user_id == user_id
+                        )
+                    )
+                    # Add new role
+                    db.execute(
+                        user_role_association.insert().values(
+                            user_id=user_id, role_id=role.id
+                        )
+                    )
+
+            db.commit()
+            db.refresh(user)
+            return user
+
     def is_username_used(self, username: str, except_id: int = 0) -> bool:
         with get_session() as db:
             username_count = (
@@ -137,43 +199,33 @@ class UserRepository:
 
         return username_count > 0
 
-
-
-    def insert_register(self, payload: RekanRegister) -> User:
-        user = User()
-        user.username = payload.username
-
-        user.full_name = payload.full_name
-        user.email = payload.email
-
-
-        ### Generate random password
-        generated_pass = id_generator()
-        hash_password = self.password_hash(generated_pass)
-        user.password = hash_password
-
-
+    def delete(self, user_id: int) -> bool:
         with get_session() as db:
-            db.add(user)
-            db.flush()
+            user = db.query(User).filter(User.id == user_id).first()
+            if not user:
+                return False
 
-            if payload.role is not None:
-                vendor_role_id = (
-                    db.query(Role.id).filter(Role.name == payload.role).one()
+            # Soft delete - update deleted_at timestamp
+            user.deleted_at = get_now()
+
+            # Remove role associations
+            db.execute(
+                delete(user_role_association).where(
+                    user_role_association.c.user_id == user_id
                 )
-                if len(vendor_role_id) > 0:
-                    role_data = [
-                        {"user_id": user.id, "role_id": vendor_role_id[0]},
-                    ]
-                    insert_user_role = insert(user_role_association).values(role_data)
-                    db.execute(insert_user_role)
-
-
+            )
 
             db.commit()
-            db.refresh(user)
+            return True
 
-        return user
+    def is_email_used(self, email: str, except_id: int = 0) -> bool:
+        with get_session() as db:
+            email_count = (
+                db.query(User)
+                .filter(User.email == email, User.id != except_id)
+                .count()
+            )
+            return email_count > 0
 
     def update_password(self, id: int, payload: RegisterUpdate) -> User | None:
         user = self.find_by_id(id)

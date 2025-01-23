@@ -28,9 +28,6 @@ class Settings(BaseSettings):
     mailgun_domain: str
     mailgun_from: str
 
-    risetai_url: str
-    risetai_token: str
-
     app_version: str = DEFAULT_APP_VERSION
 
     allowed_origins: list[AnyUrl] = []
