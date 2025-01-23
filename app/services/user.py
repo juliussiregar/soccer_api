@@ -33,23 +33,25 @@ class UserService:
 
         return users, total_rows, total_pages
 
-
-
     def create(self, payload: UserCreate) -> User:
+        # Periksa apakah username sudah digunakan
         is_username_exists = self.user_repo.is_username_used(payload.username)
         if is_username_exists:
-            raise UnprocessableException("username already used")
+            raise UnprocessableException("Username already used")
 
-
+        # Periksa apakah email sudah digunakan (jika email disediakan)
         if payload.email is not None:
-            is_email_exists = self.user_repo.is_username_used(payload.email)
+            is_email_exists = self.user_repo.is_email_used(payload.email)  # Perbaikan ke pengecekan email
             if is_email_exists:
-                raise UnprocessableException("email already used")
+                raise UnprocessableException("Email already used")
 
-        is_role_exists = self.role_repo.find_by_name(payload.role)
-        if not is_role_exists:
-            raise NotFoundException("role does not exists")
+        # Periksa apakah role ada (jika role disediakan)
+        if payload.role is not None:
+            is_role_exists = self.role_repo.find_by_name(payload.role)
+            if not is_role_exists:
+                raise NotFoundException("Role does not exist")
 
+        # Buat user baru
         try:
             user = self.user_repo.insert(payload)
         except Exception as err:

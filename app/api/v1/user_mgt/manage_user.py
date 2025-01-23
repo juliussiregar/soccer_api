@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Optional, Annotated
 
-from app.schemas.user_mgt import UserCreate, UserUpdate, RegisterUpdate, UserFilter
+from app.schemas.user_mgt import UserCreate, UserUpdate, RegisterUpdate, UserFilter, UserRegister
 
 from app.middleware.jwt import jwt_middleware, AuthUser
 from app.core.constants.auth import ROLE_ADMIN
@@ -21,6 +21,13 @@ def user_list(
     page: int = 1,  # Default page jika tidak diberikan
     q: Optional[str] = None,  # Query untuk pencarian full_name
 ):
+    
+    # Check if the user has the 'ADMIN' role
+    if not auth_user.roles or ROLE_ADMIN not in auth_user.roles:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied: Only ADMIN role can get all user"
+        )
     # Buat filter berdasarkan parameter
     filter = UserFilter(limit=limit, page=page, search=q)
 
@@ -50,16 +57,33 @@ def user_list(
 
 @router.post("/user")
 def user_create(
-    # auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
+    auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
         body: UserCreate
 ):
     # Check if the user has the 'ADMIN' role
-    # if not auth_user.roles or ROLE_ADMIN not in auth_user.roles:
-    #     raise HTTPException(
-    #         status_code=403,
-    #         detail="Access denied: Only ADMIN role can create a new user."
-    #     )
+    if not auth_user.roles or ROLE_ADMIN not in auth_user.roles:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied: Only ADMIN role can create a new user."
+        )
 
+    user = user_service.create(body)
+
+    return {
+        "data": {
+            "id": user.id,
+            "full_name": user.full_name,
+            "username": user.username,
+            "roles": [body.role],
+            "created_at": user.created_at,
+            "updated_at": user.updated_at,
+        },
+    }
+    
+@router.post("/register")
+def user_create(
+        body: UserRegister
+):
     user = user_service.create(body)
 
     return {
@@ -112,14 +136,6 @@ def user_delete(
 
     user_service.delete(id)
     return {"message": "User deleted successfully"}
-
-# @router.put("/user/update_user_password")
-# def user_update(
-#     auth_user: Annotated[AuthUser, Depends(jwt_middleware)], body: PasswordUpdate
-# ):
-#     auth_service.user_exists(auth_user.id)
-#     user = user_service.update_user_password(auth_user.id,body)
-#     return {"message": "Password updated successfully"}
 
 @router.put("/change_password/{id}")
 def user_update(

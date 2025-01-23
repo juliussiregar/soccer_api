@@ -152,6 +152,7 @@ class UserRepository:
 
     def update(self, user_id: int, payload: UserUpdate) -> User | None:
         with get_session() as db:
+            # Ambil user dari database
             user = db.query(User).filter(User.id == user_id).first()
             if not user:
                 return None
@@ -170,25 +171,35 @@ class UserRepository:
 
             # Handle role update if provided
             if payload.role:
+                # Cari role berdasarkan nama
                 role = db.query(Role).filter(Role.name == payload.role).first()
-                if role:
-                    # Remove existing roles
-                    db.execute(
-                        delete(user_role_association).where(
-                            user_role_association.c.user_id == user_id
-                        )
-                    )
-                    # Add new role
-                    db.execute(
-                        user_role_association.insert().values(
-                            user_id=user_id, role_id=role.id
-                        )
-                    )
 
+                # Jika role tidak ditemukan, buat role baru
+                if not role:
+                    role = Role(name=payload.role)
+                    db.add(role)
+                    db.commit()
+                    db.refresh(role)  # Refresh untuk mendapatkan ID role baru
+
+                # Hapus semua role lama yang terkait dengan user
+                db.execute(
+                    delete(user_role_association).where(
+                        user_role_association.c.user_id == user_id
+                    )
+                )
+
+                # Tambahkan role baru ke user
+                db.execute(
+                    user_role_association.insert().values(
+                        user_id=user_id, role_id=role.id
+                    )
+                )
+
+            # Commit semua perubahan dan refresh objek user
             db.commit()
             db.refresh(user)
             return user
-
+        
     def is_username_used(self, username: str, except_id: int = 0) -> bool:
         with get_session() as db:
             username_count = (

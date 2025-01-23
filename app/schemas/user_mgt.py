@@ -2,14 +2,21 @@ from uuid import UUID
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
-from typing import List, Optional  # Pastikan List diimpor dari typing
-
+from typing import List, Optional
 class UserFilter(BaseModel):
     limit: Optional[int] = 20  # Default limit
     page: Optional[int] = 1  # Default page
     search: Optional[str] = None  # Query pencarian full_name
 
 class UserCreate(BaseModel):
+    full_name: str
+    username: str
+    password: str
+    email: Optional[str] = None
+    role: str
+    
+    
+class UserRegister(BaseModel):
     full_name: str
     username: str
     password: str
@@ -22,7 +29,6 @@ class UserUpdate(BaseModel):
     password: Optional[str] = None
     email: Optional[str] = None
     role: Optional[str] = None
-
 
 class UserAddRole(BaseModel):
     role: str
