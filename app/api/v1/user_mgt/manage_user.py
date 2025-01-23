@@ -50,15 +50,15 @@ def user_list(
 
 @router.post("/user")
 def user_create(
-    auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
+    # auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
         body: UserCreate
 ):
     # Check if the user has the 'ADMIN' role
-    if not auth_user.roles or ROLE_ADMIN not in auth_user.roles:
-        raise HTTPException(
-            status_code=403,
-            detail="Access denied: Only ADMIN role can create a new user."
-        )
+    # if not auth_user.roles or ROLE_ADMIN not in auth_user.roles:
+    #     raise HTTPException(
+    #         status_code=403,
+    #         detail="Access denied: Only ADMIN role can create a new user."
+    #     )
 
     user = user_service.create(body)
 
