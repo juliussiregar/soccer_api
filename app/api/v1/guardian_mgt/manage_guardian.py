@@ -48,7 +48,7 @@ def list_all_guardians(
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.post("/guardian", description="Create a guardian profile")
+@router.post("/guardian/register", description="Create a guardian profile")
 def create_guardian(
     auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
     body: GuardianCreate,
@@ -76,7 +76,6 @@ def create_guardian(
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-
 
 @router.get("/guardian-me", description="Get the logged-in guardian profile")
 def get_guardian(auth_user: Annotated[AuthUser, Depends(jwt_middleware)]):
