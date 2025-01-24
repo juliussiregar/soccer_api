@@ -43,4 +43,34 @@ class TeamRepository:
             db.refresh(team)
             return team
 
+    def assign_official(self, team_id: int, official_id: int) -> TeamOfficial:
+        with get_session() as db:
+            # Cek apakah hubungan sudah ada
+            existing_assignment = db.query(TeamOfficial).filter(
+                TeamOfficial.team_id == team_id,
+                TeamOfficial.official_id == official_id
+            ).first()
 
+            if existing_assignment:
+                raise Exception("This official is already assigned to the team.")
+
+            # Buat hubungan baru
+            team_official = TeamOfficial(team_id=team_id, official_id=official_id)
+            db.add(team_official)
+            db.commit()
+            db.refresh(team_official)
+            return team_official
+
+    def unassign_official(self, team_id: int, official_id: int) -> bool:
+        with get_session() as db:
+            assignment = db.query(TeamOfficial).filter(
+                TeamOfficial.team_id == team_id,
+                TeamOfficial.official_id == official_id
+            ).first()
+
+            if not assignment:
+                raise Exception("No such assignment exists.")
+
+            db.delete(assignment)
+            db.commit()
+            return True

@@ -1,4 +1,5 @@
 from typing import Optional
+from app.models.team_official import TeamOfficial
 from app.repositories.team import TeamRepository
 from app.models.team import Team
 
@@ -29,3 +30,9 @@ class TeamService:
         if not self.team_repo.delete(team_id):
             raise Exception("Failed to delete team")
         return True
+    
+    def assign_official(self, team_id: int, official_id: int) -> TeamOfficial:
+        return self.team_official_repo.assign_official(team_id, official_id)
+
+    def unassign_official(self, team_id: int, official_id: int) -> bool:
+        return self.team_official_repo.unassign_official(team_id, official_id)
