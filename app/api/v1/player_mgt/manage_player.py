@@ -14,7 +14,7 @@ def create_player(
     auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
     body: PlayerCreate,
 ):
-    # Only GUARDIAN can create player profiles
+    # Hanya GUARDIAN yang dapat membuat profile player
     if not auth_user.roles or ROLE_GUARDIAN not in auth_user.roles:
         raise HTTPException(
             status_code=403,
@@ -23,8 +23,8 @@ def create_player(
 
     try:
         payload = body.dict()
-        payload["user_id"] = auth_user.id  # Associate the player with the guardian
-        player = player_service.create(payload)
+        payload["user_id"] = auth_user.id  # Associate player with guardian's user_id
+        player = player_service.create(payload, user_id=auth_user.id)
         return {
             "data": {
                 "id": player.id,

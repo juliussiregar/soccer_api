@@ -1,14 +1,27 @@
 from typing import Optional, List, Tuple
 from app.repositories.player import PlayerRepository
+from app.repositories.guardian import GuardianRepository
 from app.models.player import Player
 
 
 class PlayerService:
     def __init__(self) -> None:
         self.player_repo = PlayerRepository()
+        self.guardian_repo = GuardianRepository()
 
-    def create(self, payload: dict) -> Player:
-        return self.player_repo.create(payload)
+    def create(self, payload: dict, user_id: int) -> Player:
+        # Temukan Guardian berdasarkan user_id
+        guardian = self.guardian_repo.find_by_user_id(user_id)
+        if not guardian:
+            raise Exception(f"Guardian with user_id {user_id} not found.")
+
+        # Buat player baru
+        player = self.player_repo.create(payload)
+
+        # Tambahkan relasi di GuardianPlayer
+        self.player_repo.create_guardian_player(guardian_id=guardian.id, player_id=player.id)
+
+        return player
 
     def find_by_id(self, player_id: int) -> Player:
         player = self.player_repo.find_by_id(player_id)

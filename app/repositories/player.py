@@ -1,5 +1,7 @@
 from typing import Optional, List
 from app.core.database import get_session
+from app.models.guardian import Guardian
+from app.models.guardian_player import GuardianPlayer
 from app.models.player import Player
 from app.utils.date import get_now
 
@@ -17,13 +19,17 @@ class PlayerRepository:
         with get_session() as db:
             return db.query(Player).filter(Player.id == player_id).one_or_none()
 
-    def find_by_guardian_id(self, guardian_id: int) -> List[Player]:
+    def find_by_guardian_id(self, user_id: int) -> List[Player]:
         with get_session() as db:
             return db.query(Player).join(
-                Player.guardian_player
+                GuardianPlayer, GuardianPlayer.player_id == Player.id
+            ).join(
+                Guardian, Guardian.id == GuardianPlayer.guardian_id
             ).filter(
-                Player.guardian_player.guardian_id == guardian_id
+                Guardian.user_id == user_id  # Filter berdasarkan user_id dari tabel Guardian
             ).all()
+
+
 
     def list_all(self, limit: int, offset: int) -> List[Player]:
         with get_session() as db:
@@ -57,3 +63,9 @@ class PlayerRepository:
             db.delete(player)
             db.commit()
             return True
+
+    def create_guardian_player(self, guardian_id: int, player_id: int) -> None:
+        with get_session() as db:
+            guardian_player = GuardianPlayer(guardian_id=guardian_id, player_id=player_id)
+            db.add(guardian_player)
+            db.commit()
