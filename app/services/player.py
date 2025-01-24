@@ -48,3 +48,6 @@ class PlayerService:
         if not self.player_repo.delete(player_id):
             raise Exception("Failed to delete player")
         return True
+
+    def find_by_team_id(self, team_id: int) -> List[Player]:
+        return self.player_repo.find_by_team_id(team_id)

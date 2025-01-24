@@ -40,7 +40,7 @@ def create_team(
                 "team_name": team.team_name,
                 "team_logo": team.team_logo,
                 "coach_name": team.coach_name,
-                "total_players": team.total_players,
+                "total_players": 0,
                 "created_at": team.created_at,
                 "updated_at": team.updated_at,
             }
@@ -49,19 +49,24 @@ def create_team(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/team/{team_id}", description="Get a team by ID")
+@router.get("/team", description="Get the team associated with the logged-in official")
 def get_team(
-    team_id: int,
     auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
 ):
     try:
-        team = team_service.find_by_id(team_id)
-
-        # Hanya ADMIN atau pemilik tim (OFFICIAL) yang dapat mengakses tim ini
-        if not auth_user.roles or (ROLE_ADMIN not in auth_user.roles and team.created_by != auth_user.id):
+        # Pastikan hanya OFFICIAL yang dapat mengakses endpoint ini
+        if not auth_user.roles or ROLE_OFFICIAL not in auth_user.roles:
             raise HTTPException(
                 status_code=403,
-                detail="Access denied: You do not have permission to view this team."
+                detail="Access denied: Only OFFICIAL role can view the team."
+            )
+
+        # Cari tim berdasarkan user_id dari data login
+        team = team_service.find_team_by_user_id(auth_user.id)
+        if not team:
+            raise HTTPException(
+                status_code=404,
+                detail="No team found for the logged-in official."
             )
 
         return {
@@ -77,26 +82,22 @@ def get_team(
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.put("/team/{team_id}", description="Update a team by ID")
-def update_team(
-    team_id: int,
+    
+@router.put("/team/update", description="Update a team associated with the logged-in official")
+def update_team_by_user(
     auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
     body: TeamUpdate,
 ):
     try:
-        team = team_service.find_by_id(team_id)
-
-        # Hanya ADMIN atau pemilik tim (OFFICIAL) yang dapat memperbarui tim ini
-        if not auth_user.roles or (ROLE_ADMIN not in auth_user.roles and team.created_by != auth_user.id):
+        # Pastikan hanya OFFICIAL yang dapat mengakses endpoint ini
+        if not auth_user.roles or ROLE_OFFICIAL not in auth_user.roles:
             raise HTTPException(
                 status_code=403,
-                detail="Access denied: You do not have permission to update this team."
+                detail="Access denied: Only OFFICIAL role can update the team."
             )
 
         payload = body.dict(exclude_unset=True)  # Hanya memperbarui field yang disediakan
-        updated_team = team_service.update(team_id, payload)
+        updated_team = team_service.update_team_by_user_id(auth_user.id, payload)
 
         return {
             "data": {

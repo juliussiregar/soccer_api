@@ -3,6 +3,7 @@ from app.core.database import get_session
 from app.models.guardian import Guardian
 from app.models.guardian_player import GuardianPlayer
 from app.models.player import Player
+from app.models.team_player import TeamPlayer
 from app.utils.date import get_now
 
 
@@ -69,3 +70,11 @@ class PlayerRepository:
             guardian_player = GuardianPlayer(guardian_id=guardian_id, player_id=player_id)
             db.add(guardian_player)
             db.commit()
+            
+    def find_by_team_id(self, team_id: int) -> List[Player]:
+        with get_session() as db:
+            return db.query(Player).join(
+                TeamPlayer, TeamPlayer.player_id == Player.id
+            ).filter(
+                TeamPlayer.team_id == team_id
+            ).all()
