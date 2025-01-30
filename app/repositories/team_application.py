@@ -3,7 +3,9 @@ from app.core.database import get_session
 from app.models.official import Official
 from app.models.team_application import TeamApplication, ApplicationStatus
 from app.models.team_official import TeamOfficial
+from app.models.team_player import TeamPlayer
 from app.utils.date import get_now
+from sqlalchemy.exc import IntegrityError
 
 
 class TeamApplicationRepository:
@@ -31,6 +33,36 @@ class TeamApplicationRepository:
 
             application.status = status
             application.updated_at = get_now()
+
+            if application.team_id is None or application.player_id is None:
+                raise Exception("Team ID or Player ID is missing")
+
+            # Pastikan if statement dijalankan
+            if str(status) == str(ApplicationStatus.ACCEPTED):
+                existing_team_player = (
+                    db.query(TeamPlayer)
+                    .filter(
+                        TeamPlayer.team_id == application.team_id,
+                        TeamPlayer.player_id == application.player_id
+                    )
+                    .first()
+                )
+
+                if not existing_team_player:
+                    try:
+                        new_team_player = TeamPlayer(
+                            team_id=application.team_id,
+                            player_id=application.player_id
+                        )
+                        db.add(new_team_player)
+                        db.flush()  # Memastikan perubahan sebelum commit
+                        db.commit()
+                        db.refresh(new_team_player)
+
+                    except IntegrityError as e:
+                        db.rollback()
+                        raise Exception("Player is already assigned to the team.")
+
             db.commit()
             db.refresh(application)
             return application

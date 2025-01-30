@@ -30,6 +30,13 @@ class PlayerRepository:
                 Guardian.user_id == user_id  # Filter berdasarkan user_id dari tabel Guardian
             ).all()
 
+    def find_by_ids(self, player_ids: List[int]) -> List[Player]:
+        if not player_ids:
+            return []
+
+        with get_session() as db:
+            return db.query(Player).filter(Player.id.in_(player_ids)).all()
+
 
 
     def list_all(self, limit: int, offset: int) -> List[Player]:

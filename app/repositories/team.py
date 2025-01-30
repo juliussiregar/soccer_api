@@ -2,8 +2,11 @@ from typing import List, Optional
 from app.core.database import get_session
 from app.models.official import Official
 from app.models.team import Team
+from app.models.team_player import TeamPlayer
 from app.models.team_official import TeamOfficial
 from app.utils.date import get_now
+from sqlalchemy import func  # Pastikan ini diimpor
+
 
 
 class TeamRepository:
@@ -47,6 +50,38 @@ class TeamRepository:
     def find_by_id(self, team_id: int) -> Optional[Team]:
         with get_session() as db:
             return db.query(Team).filter(Team.id == team_id).one_or_none()
+
+    def find_by_user_id(self, user_id: int) -> Optional[Team]:
+        with get_session() as db:
+            # Query untuk mendapatkan tim berdasarkan user_id
+            team = (
+                db.query(Team)
+                .join(TeamOfficial, TeamOfficial.team_id == Team.id)
+                .join(Official, Official.id == TeamOfficial.official_id)
+                .filter(Official.user_id == user_id)
+                .first()
+            )
+
+            if team:
+                # Hitung jumlah pemain dalam team_players berdasarkan team_id
+                total_players = (
+                    db.query(func.count(TeamPlayer.id))
+                    .filter(TeamPlayer.team_id == team.id)
+                    .scalar()
+                )
+
+                # Buat objek baru dengan data yang diperbarui untuk menghindari sesi yang tertutup
+                updated_team = Team(
+                    id=team.id,
+                    team_name=team.team_name,
+                    team_logo=team.team_logo,
+                    coach_name=team.coach_name,
+                    total_players=total_players,
+                    created_at=team.created_at,
+                    updated_at=team.updated_at
+                )
+
+                return updated_team  # Mengembalikan objek baru yang tidak terkait dengan sesi
 
     def find_by_official_id(self, official_id: int) -> Optional[Team]:
         with get_session() as db:

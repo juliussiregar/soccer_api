@@ -73,18 +73,14 @@ def create_team(
 
 
 @router.get("/team", description="Get the team associated with the logged-in official")
-def get_team(
-    auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
-):
+def get_team(auth_user: Annotated[AuthUser, Depends(jwt_middleware)]):
     try:
-        # Pastikan hanya OFFICIAL yang dapat mengakses endpoint ini
         if not auth_user.roles or ROLE_OFFICIAL not in auth_user.roles:
             raise HTTPException(
                 status_code=403,
                 detail="Access denied: Only OFFICIAL role can view the team."
             )
 
-        # Cari tim berdasarkan user_id dari data login
         team = team_service.find_team_by_user_id(auth_user.id)
         if not team:
             raise HTTPException(
@@ -98,7 +94,7 @@ def get_team(
                 "team_name": team.team_name,
                 "team_logo": team.team_logo,
                 "coach_name": team.coach_name,
-                "total_players": team.total_players,
+                "total_players": team.total_players,  # Sudah diperbarui
                 "created_at": team.created_at,
                 "updated_at": team.updated_at,
             }

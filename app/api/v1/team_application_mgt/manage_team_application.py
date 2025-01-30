@@ -9,6 +9,8 @@ from app.services.team_application import TeamApplicationService
 from app.core.constants.auth import ROLE_GUARDIAN, ROLE_OFFICIAL, ROLE_PLAYER
  # Kumpulkan semua player_id yang terikat dengan guardian_id
 from app.models.guardian_player import GuardianPlayer
+from app.models.team_application import TeamApplication
+from app.models.team import Team
 from app.core.database import get_session
 
 router = APIRouter()
@@ -53,24 +55,24 @@ def update_application_status(
     auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
     body: TeamApplicationUpdate,
 ):
-    # Hanya OFFICIAL yang terdaftar dalam team official yang bisa mengubah status
     if not auth_user.roles or ROLE_OFFICIAL not in auth_user.roles:
         raise HTTPException(
             status_code=403,
             detail="Access denied: Only OFFICIAL role can update application status."
         )
 
-    try:
-        application = team_application_service.find_by_id(application_id)
+    with get_session() as db:  # Pastikan sesi tetap terbuka
+        application = db.query(TeamApplication).filter(TeamApplication.id == application_id).first()
 
-        # Pastikan official terdaftar di tim yang bersangkutan
-        if auth_user.id not in [official.official_id for official in application.team.team_officials]:
-            raise HTTPException(
-                status_code=403,
-                detail="Access denied: You are not associated with this team."
-            )
+        if not application:
+            raise HTTPException(status_code=404, detail="Application not found")
+
+        # Load team & team_officials secara eksplisit sebelum sesi tertutup
+        application.team.team_officials
+ 
 
         updated_application = team_application_service.update_status(application_id, body.status)
+
         return {
             "data": {
                 "id": updated_application.id,
@@ -82,8 +84,7 @@ def update_application_status(
                 "updated_at": updated_application.updated_at,
             }
         }
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+
 
 
 @router.get("/team/application/player", description="Get applications by player ID (GUARDIAN)")
@@ -174,12 +175,13 @@ def get_applications_by_team(
         # Dapatkan aplikasi berdasarkan user_id yang sedang login
         applications = team_application_service.get_applications_by_user_id(auth_user.id)
 
-        # Format response
+        # Format response dengan name (nama pemain)
         return {
             "data": [
                 {
                     "id": app.id,
                     "player_id": app.player_id,
+                    "name": app.name,  # Tambahkan nama pemain
                     "team_id": app.team_id,
                     "status": app.status,
                     "message": app.message,

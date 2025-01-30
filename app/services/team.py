@@ -38,7 +38,8 @@ class TeamService:
         return self.team_official_repo.unassign_official(team_id, official_id)
     
     def find_team_by_user_id(self, user_id: int) -> Optional[Team]:
-        return self.team_repo.find_team_by_user_id(user_id)
+            return self.team_repo.find_by_user_id(user_id)
+            
     def update_team_by_user_id(self, user_id: int, payload: dict) -> Team:
         """
         Update tim berdasarkan user_id melalui repository.
