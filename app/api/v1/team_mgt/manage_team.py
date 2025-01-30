@@ -9,6 +9,29 @@ router = APIRouter()
 team_service = TeamService()
 
 
+@router.get("/all-teams", description="Get all teams without login")
+def get_all_teams():
+    try:
+        # Panggil service untuk mendapatkan semua tim
+        teams = team_service.get_all_teams()
+        return {
+            "data": [
+                {
+                    "id": team.id,
+                    "team_name": team.team_name,
+                    "team_logo": team.team_logo,
+                    "coach_name": team.coach_name,
+                    "total_players": team.total_players,
+                    "created_at": team.created_at,
+                    "updated_at": team.updated_at,
+                }
+                for team in teams
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.post("/team", description="Create a team")
 def create_team(
     auth_user: Annotated[AuthUser, Depends(jwt_middleware)],

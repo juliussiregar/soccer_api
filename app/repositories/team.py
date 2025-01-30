@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 from app.core.database import get_session
 from app.models.official import Official
 from app.models.team import Team
@@ -142,4 +142,9 @@ class TeamRepository:
             except Exception as e:
                 db.rollback()
                 raise Exception(f"Failed to update team: {str(e)}")
+            
+    def get_all_teams(self) -> List[Team]:
+        with get_session() as db:
+            return db.query(Team).all()
+
 

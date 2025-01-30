@@ -1,4 +1,5 @@
 from typing import List
+from app.core.database import get_session
 from app.repositories.team_application import TeamApplicationRepository
 from app.models.team_application import TeamApplication, ApplicationStatus
 from app.models.team import Team
@@ -37,3 +38,17 @@ class TeamApplicationService:
         if not self.application_repo.delete(application_id):
             raise Exception("Failed to delete application")
         return True
+    
+    def find_by_player_ids(self, player_ids: List[int]) -> List[TeamApplication]:
+        if not player_ids:
+            return []
+        return self.application_repo.find_by_player_ids(player_ids)
+
+
+    def get_applications_by_user_id(self, user_id: int) -> List[TeamApplication]:
+        # Cari team_id berdasarkan user_id
+        team_id = self.application_repo.find_team_id_by_user_id(user_id)
+
+        # Cari aplikasi berdasarkan team_id
+        return self.application_repo.find_by_team_id(team_id)
+

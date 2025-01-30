@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 from app.models.team_official import TeamOfficial
 from app.repositories.team import TeamRepository
 from app.models.team import Team
@@ -44,5 +44,8 @@ class TeamService:
         Update tim berdasarkan user_id melalui repository.
         """
         return self.team_repo.update_team_by_user_id(user_id, payload)
+    
+    def get_all_teams(self) -> List[Team]:
+        return self.team_repo.get_all_teams()
 
 
