@@ -1,4 +1,5 @@
-from typing import List, Tuple
+from typing import List, Optional, Tuple
+from app.models.team_official import TeamOfficial
 from app.repositories.official import OfficialRepository
 from app.models.official import Official
 
@@ -15,6 +16,9 @@ class OfficialService:
         if not official:
             raise Exception("Official profile not found")
         return official
+    
+    def find_team_official_by_official_id(self, official_id: int) -> Optional[TeamOfficial]:
+        return self.official_repo.find_team_official_by_official_id(official_id)
 
     def update(self, user_id: int, payload: dict) -> Official:
         official = self.official_repo.update(user_id, payload)

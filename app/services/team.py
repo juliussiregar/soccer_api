@@ -1,4 +1,5 @@
-from typing import Optional
+from typing import List, Optional
+from app.models.team_official import TeamOfficial
 from app.repositories.team import TeamRepository
 from app.models.team import Team
 
@@ -29,3 +30,22 @@ class TeamService:
         if not self.team_repo.delete(team_id):
             raise Exception("Failed to delete team")
         return True
+    
+    def assign_official(self, team_id: int, official_id: int) -> TeamOfficial:
+        return self.team_official_repo.assign_official(team_id, official_id)
+
+    def unassign_official(self, team_id: int, official_id: int) -> bool:
+        return self.team_official_repo.unassign_official(team_id, official_id)
+    
+    def find_team_by_user_id(self, user_id: int) -> Optional[Team]:
+        return self.team_repo.find_team_by_user_id(user_id)
+    def update_team_by_user_id(self, user_id: int, payload: dict) -> Team:
+        """
+        Update tim berdasarkan user_id melalui repository.
+        """
+        return self.team_repo.update_team_by_user_id(user_id, payload)
+    
+    def get_all_teams(self) -> List[Team]:
+        return self.team_repo.get_all_teams()
+
+

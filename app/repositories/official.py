@@ -2,6 +2,7 @@ from typing import Optional, List
 from sqlalchemy.orm import Query
 from app.core.database import get_session
 from app.models.official import Official
+from app.models.team_official import TeamOfficial
 from app.utils.date import get_now
 
 
@@ -17,6 +18,10 @@ class OfficialRepository:
     def find_by_user_id(self, user_id: int) -> Optional[Official]:
         with get_session() as db:
             return db.query(Official).filter(Official.user_id == user_id).one_or_none()
+        
+    def find_team_official_by_official_id(self, official_id: int) -> Optional[TeamOfficial]:
+        with get_session() as db:
+            return db.query(TeamOfficial).filter(TeamOfficial.official_id == official_id).one_or_none()
 
     def update(self, user_id: int, payload: dict) -> Optional[Official]:
         with get_session() as db:

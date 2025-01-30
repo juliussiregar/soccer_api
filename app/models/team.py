@@ -18,3 +18,6 @@ class Team(Base):
      # Relasi ke TeamPlayer
     team_players = relationship("TeamPlayer", back_populates="team", cascade="all, delete-orphan")
     team_officials = relationship("TeamOfficial", back_populates="team", cascade="all, delete-orphan")
+    # Relasi ke TeamApplication
+    team_applications = relationship("TeamApplication", back_populates="team", cascade="all, delete-orphan")
+
