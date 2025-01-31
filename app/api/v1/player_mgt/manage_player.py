@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Annotated, Optional
-from app.schemas.player import PlayerCreate, PlayerUpdate
+from typing import List
+from app.schemas.player import PlayerCreate, PlayerUpdate, PlayerResponse
 from app.middleware.jwt import jwt_middleware, AuthUser
 from app.schemas.user_mgt import UserRegister
 from app.services.official import OfficialService
@@ -254,3 +255,19 @@ def get_players_by_team_for_official(
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/players/no-team", response_model=List[PlayerResponse], description="Get all players who are not in any team")
+def get_players_without_team(
+    auth_user: AuthUser = Depends(jwt_middleware)
+):
+    # Hanya OFFICIAL yang bisa mengakses
+    if not auth_user.roles or "OFFICIAL" not in auth_user.roles:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied: Only OFFICIAL role can access this resource."
+        )
+
+    # Ambil daftar pemain yang belum memiliki tim
+    players = player_service.get_players_without_team()
+    
+    return players

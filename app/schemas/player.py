@@ -22,3 +22,15 @@ class PlayerUpdate(BaseModel):
     height: Optional[int] = None
     weight: Optional[int] = None
     bio: Optional[str] = None
+
+
+class PlayerResponse(BaseModel):
+    id: int
+    name: str
+    position: str
+    age: int
+    jersey_number: int
+    height: int
+    weight: int
+    bio: str
+    profile_picture: str

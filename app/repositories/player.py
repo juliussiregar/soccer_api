@@ -30,6 +30,17 @@ class PlayerRepository:
                 Guardian.user_id == user_id  # Filter berdasarkan user_id dari tabel Guardian
             ).all()
 
+    def find_players_without_team(self) -> List[Player]:
+        with get_session() as db:
+            # Cari pemain yang tidak ada di tabel TeamPlayer
+            subquery = db.query(TeamPlayer.player_id).distinct()
+            players_without_team = (
+                db.query(Player)
+                .filter(Player.id.notin_(subquery))  # Cari pemain yang ID-nya tidak ada di TeamPlayer
+                .all()
+            )
+            return players_without_team
+            
     def find_by_ids(self, player_ids: List[int]) -> List[Player]:
         if not player_ids:
             return []

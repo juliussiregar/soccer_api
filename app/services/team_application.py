@@ -53,7 +53,6 @@ class TeamApplicationService:
 
         return updated_application
 
-
     def delete(self, application_id: int) -> bool:
         if not self.application_repo.delete(application_id):
             raise Exception("Failed to delete application")
@@ -75,10 +74,21 @@ class TeamApplicationService:
 
         players = {player.id: player.name for player in self.player_repo.find_by_ids(player_ids)}
 
-        for app in applications:
-            app.name = players.get(app.player_id, "Unknown")
+        return [
+            {
+                "id": app.id,
+                "player_id": app.player_id,
+                "name": players.get(app.player_id, "Unknown"),  # Tambahkan name dalam dictionary
+                "team_id": app.team_id,
+                "status": app.status.value,
+                "message": app.message,
+                "types": app.types.value,
+                "created_at": app.created_at,
+                "updated_at": app.updated_at,
+            }
+            for app in applications
+        ]
 
-        return applications
 
 
 

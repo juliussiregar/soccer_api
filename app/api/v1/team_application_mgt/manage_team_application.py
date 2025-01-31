@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, logger
 from typing import Annotated
 from app.models.guardian import Guardian
 from app.models.team_official import TeamOfficial
-from app.schemas.team_application import TeamApplicationCreate, TeamApplicationUpdate
+from app.schemas.team_application import TeamApplicationCreate, TeamApplicationUpdate, ApplicationTypes
 from app.middleware.jwt import jwt_middleware, AuthUser
 from app.services.team_application import TeamApplicationService
 from app.core.constants.auth import ROLE_GUARDIAN, ROLE_OFFICIAL, ROLE_PLAYER
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 @router.post("/team/application", description="Create a team application (GUARDIAN only)")
 def create_team_application(
     auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
-    body: TeamApplicationCreate,
+    body: TeamApplicationCreate
 ):
     # Hanya GUARDIAN yang bisa membuat aplikasi
     if not auth_user.roles or ROLE_GUARDIAN not in auth_user.roles:
@@ -33,6 +33,8 @@ def create_team_application(
 
     try:
         payload = body.dict()
+        payload["types"] = ApplicationTypes.APPLICATION.value  
+
         application = team_application_service.create(payload)
         return {
             "data": {
@@ -41,6 +43,39 @@ def create_team_application(
                 "team_id": application.team_id,
                 "status": application.status,
                 "message": application.message,
+                "types": application.types.value,  
+                "created_at": application.created_at,
+                "updated_at": application.updated_at,
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/team/invitation", description="Send a team invitation (OFFICIAL only)")
+def create_team_invitation(
+    auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
+    body: TeamApplicationCreate
+):
+    # Hanya OFFICIAL yang bisa mengirim undangan
+    if not auth_user.roles or ROLE_OFFICIAL not in auth_user.roles:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied: Only OFFICIAL role can send a team invitation."
+        )
+
+    try:
+        payload = body.dict()
+        payload["types"] = ApplicationTypes.INVITATION.value
+
+        application = team_application_service.create(payload)
+        return {
+            "data": {
+                "id": application.id,
+                "player_id": application.player_id,
+                "team_id": application.team_id,
+                "status": application.status,
+                "message": application.message,
+                "types": application.types.value,  # Pastikan mengembalikan string
                 "created_at": application.created_at,
                 "updated_at": application.updated_at,
             }
@@ -161,35 +196,21 @@ def delete_team_application(
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/team/applications", description="Get all applications for the team (OFFICIAL only)")
-def get_applications_by_team(
-    auth_user: Annotated[AuthUser, Depends(jwt_middleware)]
-):
-    # Hanya OFFICIAL yang bisa mengakses endpoint ini
-    if not auth_user.roles or ROLE_OFFICIAL not in auth_user.roles:
-        raise HTTPException(
-            status_code=403,
-            detail="Access denied: Only OFFICIAL role can view applications for their team."
-        )
-
+def get_applications_by_team(auth_user: Annotated[AuthUser, Depends(jwt_middleware)]):
     try:
-        # Dapatkan aplikasi berdasarkan user_id yang sedang login
-        applications = team_application_service.get_applications_by_user_id(auth_user.id)
+        logger.info(f"Fetching applications for user ID: {auth_user.id}, roles: {auth_user.roles}")
 
-        # Format response dengan name (nama pemain)
-        return {
-            "data": [
-                {
-                    "id": app.id,
-                    "player_id": app.player_id,
-                    "name": app.name,  # Tambahkan nama pemain
-                    "team_id": app.team_id,
-                    "status": app.status,
-                    "message": app.message,
-                    "created_at": app.created_at,
-                    "updated_at": app.updated_at,
-                }
-                for app in applications
-            ]
-        }
+        # Validasi role
+        if not auth_user.roles or ROLE_OFFICIAL not in auth_user.roles:
+            raise HTTPException(
+                status_code=403,
+                detail="Access denied: Only OFFICIAL role can view applications for their team."
+            )
+
+        applications = team_application_service.get_applications_by_user_id(auth_user.id)
+        logger.info(f"Found applications: {applications}")
+
+        return {"data": applications}
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.error(f"Error fetching team applications: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

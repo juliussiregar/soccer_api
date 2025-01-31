@@ -29,6 +29,8 @@ class PlayerService:
             raise Exception("Player not found")
         return player
 
+
+
     def find_by_guardian_id(self, guardian_id: int) -> List[Player]:
         return self.player_repo.find_by_guardian_id(guardian_id)
 
@@ -51,3 +53,6 @@ class PlayerService:
 
     def find_by_team_id(self, team_id: int) -> List[Player]:
         return self.player_repo.find_by_team_id(team_id)
+
+    def get_players_without_team(self) -> List[Player]:
+        return self.player_repo.find_players_without_team()
