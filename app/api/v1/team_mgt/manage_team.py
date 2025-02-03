@@ -3,7 +3,7 @@ from typing import Annotated
 from app.schemas.team import TeamCreate, TeamOfficialAssign, TeamUpdate
 from app.middleware.jwt import jwt_middleware, AuthUser
 from app.services.team import TeamService
-from app.core.constants.auth import ROLE_ADMIN, ROLE_OFFICIAL
+from app.core.constants.auth import ROLE_ADMIN, ROLE_OFFICIAL, ROLE_PLAYER
 
 router = APIRouter()
 team_service = TeamService()
@@ -20,8 +20,11 @@ def get_all_teams():
                     "id": team.id,
                     "team_name": team.team_name,
                     "team_logo": team.team_logo,
-                    "coach_name": team.coach_name,
+                    "founded_at": team.founded_at,
+                    "basecamp": team.basecamp,
+                    "contact": team.contact,
                     "total_players": team.total_players,
+                    "description": team.description,
                     "created_at": team.created_at,
                     "updated_at": team.updated_at,
                 }
@@ -30,6 +33,41 @@ def get_all_teams():
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+    
+@router.get("/my-team", description="Get the team associated with the logged-in official or player")
+def get_team(auth_user: Annotated[AuthUser, Depends(jwt_middleware)]):
+    try:
+        # Periksa apakah user memiliki role OFFICIAL atau PLAYER
+        if not any(role in ["OFFICIAL", "PLAYER"] for role in auth_user.roles):
+            raise HTTPException(
+                status_code=403,
+                detail="Access denied: Only OFFICIAL or PLAYER can view the team."
+            )   
+        team = team_service.get_team_by_user(auth_user.id, auth_user.roles)
+
+        if not team:
+            return {
+                "message": "User is not associated with any team.",
+                "data": None
+            }
+
+        return {
+            "data": {
+                "id": team.id,
+                "team_name": team.team_name,
+                "team_logo": team.team_logo,
+                "founded_at": team.founded_at,
+                "basecamp": team.basecamp,
+                "contact": team.contact,
+                "total_players": team.total_players,
+                "description": team.description,
+                "created_at": team.created_at,
+                "updated_at": team.updated_at,
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 
 
 @router.post("/team", description="Create a team")
@@ -47,7 +85,7 @@ def create_team(
     try:
         # Jika pengguna adalah OFFICIAL, pastikan mereka hanya memiliki satu tim
         if ROLE_OFFICIAL in auth_user.roles:
-            existing_team = team_service.find_by_official_id(auth_user.id)
+            existing_team = team_service.get_team_by_user(auth_user.id, auth_user.roles)
             if existing_team:
                 raise HTTPException(
                     status_code=403,
@@ -62,8 +100,11 @@ def create_team(
                 "id": team.id,
                 "team_name": team.team_name,
                 "team_logo": team.team_logo,
-                "coach_name": team.coach_name,
-                "total_players": 0,
+                "founded_at": team.founded_at,
+                "basecamp": team.basecamp,
+                "contact": team.contact,
+                "total_players": team.total_players,
+                "description": team.description,
                 "created_at": team.created_at,
                 "updated_at": team.updated_at,
             }
@@ -71,36 +112,6 @@ def create_team(
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-
-@router.get("/team", description="Get the team associated with the logged-in official")
-def get_team(auth_user: Annotated[AuthUser, Depends(jwt_middleware)]):
-    try:
-        if not auth_user.roles or ROLE_OFFICIAL not in auth_user.roles:
-            raise HTTPException(
-                status_code=403,
-                detail="Access denied: Only OFFICIAL role can view the team."
-            )
-
-        team = team_service.find_team_by_user_id(auth_user.id)
-        if not team:
-            raise HTTPException(
-                status_code=404,
-                detail="No team found for the logged-in official."
-            )
-
-        return {
-            "data": {
-                "id": team.id,
-                "team_name": team.team_name,
-                "team_logo": team.team_logo,
-                "coach_name": team.coach_name,
-                "total_players": team.total_players,  # Sudah diperbarui
-                "created_at": team.created_at,
-                "updated_at": team.updated_at,
-            }
-        }
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
     
 @router.put("/team/update", description="Update a team associated with the logged-in official")
 def update_team_by_user(
@@ -123,8 +134,11 @@ def update_team_by_user(
                 "id": updated_team.id,
                 "team_name": updated_team.team_name,
                 "team_logo": updated_team.team_logo,
-                "coach_name": updated_team.coach_name,
+                "founded_at": updated_team.founded_at,
+                "basecamp": updated_team.basecamp,
+                "contact": updated_team.contact,
                 "total_players": updated_team.total_players,
+                "description": updated_team.description,
                 "created_at": updated_team.created_at,
                 "updated_at": updated_team.updated_at,
             }

@@ -31,8 +31,11 @@ def list_all_guardians(
                 {
                     "id": guardian.id,
                     "name": guardian.name,
+                    "birth_date": guardian.birth_date,
                     "kartu_keluarga": guardian.kartu_keluarga,
                     "ktp": guardian.ktp,
+                    "phone_number": guardian.phone_number,
+                    "address": guardian.address,
                     "created_at": guardian.created_at,
                     "updated_at": guardian.updated_at,
                 }
@@ -48,34 +51,6 @@ def list_all_guardians(
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.post("/guardian/register", description="Create a guardian profile")
-def create_guardian(
-    auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
-    body: GuardianCreate,
-):
-    # Check if the user has the 'GUARDIAN' role
-    if not auth_user.roles or ROLE_GUARDIAN not in auth_user.roles:
-        raise HTTPException(
-            status_code=403,
-            detail="Access denied: Only GUARDIAN role can create a guardian profile."
-        )
-
-    try:
-        payload = body.dict()
-        payload["user_id"] = auth_user.id  # Associate the logged-in user
-        guardian = guardian_service.create(payload)
-        return {
-            "data": {
-                "id": guardian.id,
-                "name": guardian.name,
-                "kartu_keluarga": guardian.kartu_keluarga,
-                "ktp": guardian.ktp,
-                "created_at": guardian.created_at,
-                "updated_at": guardian.updated_at,
-            }
-        }
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/guardian-me", description="Get the logged-in guardian profile")
 def get_guardian(auth_user: Annotated[AuthUser, Depends(jwt_middleware)]):
@@ -95,8 +70,10 @@ def get_guardian(auth_user: Annotated[AuthUser, Depends(jwt_middleware)]):
             "data": {
                 "id": guardian.id,
                 "name": guardian.name,
+                "birth_date": guardian.birth_date,
                 "kartu_keluarga": guardian.kartu_keluarga,
                 "ktp": guardian.ktp,
+                "phone_number": guardian.phone_number,                    "address": guardian.address,
                 "created_at": guardian.created_at,
                 "updated_at": guardian.updated_at,
             }
@@ -124,8 +101,10 @@ def update_guardian(
             "data": {
                 "id": guardian.id,
                 "name": guardian.name,
+                "birth_date": guardian.birth_date,
                 "kartu_keluarga": guardian.kartu_keluarga,
                 "ktp": guardian.ktp,
+                "phone_number": guardian.phone_number,                    "address": guardian.address,
                 "created_at": guardian.created_at,
                 "updated_at": guardian.updated_at,
             }

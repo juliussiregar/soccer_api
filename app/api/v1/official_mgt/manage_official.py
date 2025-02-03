@@ -8,37 +8,6 @@ from app.core.constants.auth import ROLE_ADMIN, ROLE_OFFICIAL
 router = APIRouter()
 official_service = OfficialService()
 
-
-@router.post("/official/register", description="Register an official profile")
-def register_official(
-    auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
-    body: OfficialCreate,
-):
-    # Check if the user has the 'OFFICIAL' role
-    if not auth_user.roles or ROLE_OFFICIAL not in auth_user.roles:
-        raise HTTPException(
-            status_code=403,
-            detail="Access denied: Only OFFICIAL role can register an official profile."
-        )
-
-    try:
-        payload = body.dict()
-        payload["user_id"] = auth_user.id  # Associate the logged-in user
-        official = official_service.create(payload)
-        return {
-            "data": {
-                "id": official.id,
-                "name": official.name,
-                "position": official.position,
-                "profile_picture": official.profile_picture,
-                "created_at": official.created_at,
-                "updated_at": official.updated_at,
-            }
-        }
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
 @router.get("/official-me", description="Get the logged-in official profile")
 def get_official(auth_user: Annotated[AuthUser, Depends(jwt_middleware)]):
     # Check if the user has the 'OFFICIAL' role

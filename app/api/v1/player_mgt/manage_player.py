@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Annotated, Optional
 from typing import List
-from app.schemas.player import PlayerCreate, PlayerUpdate, PlayerResponse
+from app.schemas.player import PlayerUpdate, PlayerResponse
 from app.middleware.jwt import jwt_middleware, AuthUser
 from app.services.official import OfficialService
 from app.services.player import PlayerService
@@ -31,13 +31,20 @@ def get_players_by_guardian(
                 {
                     "id": player.id,
                     "name": player.name,
-                    "position": player.position,
+                    "main_position": player.main_position,
+                    "second_position": player.second_position,
+                    "third_position": player.third_position,
                     "profile_picture": player.profile_picture,
-                    "age": player.age,
+                    "birth_date": player.birth_date,
                     "jersey_number": player.jersey_number,
-                    "height": player.height,
+                    "NISN": player.NISN,
+                    "jersey_number": player.jersey_number,
+                    "dominant_foot": player.dominant_foot,
                     "weight": player.weight,
                     "bio": player.bio,
+                    "total_event": player.total_event,
+                    "total_match": player.total_match,
+                    "playing_time": player.playing_time,
                     "created_at": player.created_at,
                     "updated_at": player.updated_at,
                 }
@@ -69,13 +76,20 @@ def list_all_players(
                 {
                     "id": player.id,
                     "name": player.name,
-                    "position": player.position,
+                    "main_position": player.main_position,
+                    "second_position": player.second_position,
+                    "third_position": player.third_position,
                     "profile_picture": player.profile_picture,
-                    "age": player.age,
+                    "birth_date": player.birth_date,
                     "jersey_number": player.jersey_number,
-                    "height": player.height,
+                    "NISN": player.NISN,
+                    "jersey_number": player.jersey_number,
+                    "dominant_foot": player.dominant_foot,
                     "weight": player.weight,
                     "bio": player.bio,
+                    "total_event": player.total_event,
+                    "total_match": player.total_match,
+                    "playing_time": player.playing_time,
                     "created_at": player.created_at,
                     "updated_at": player.updated_at,
                 }
@@ -119,16 +133,23 @@ def update_player(
         return {
             "data": {
                 "id": player.id,
-                "name": player.name,
-                "position": player.position,
-                "profile_picture": player.profile_picture,
-                "age": player.age,
-                "jersey_number": player.jersey_number,
-                "height": player.height,
-                "weight": player.weight,
-                "bio": player.bio,
-                "created_at": player.created_at,
-                "updated_at": player.updated_at,
+                    "name": player.name,
+                    "main_position": player.main_position,
+                    "second_position": player.second_position,
+                    "third_position": player.third_position,
+                    "profile_picture": player.profile_picture,
+                    "birth_date": player.birth_date,
+                    "jersey_number": player.jersey_number,
+                    "NISN": player.NISN,
+                    "jersey_number": player.jersey_number,
+                    "dominant_foot": player.dominant_foot,
+                    "weight": player.weight,
+                    "bio": player.bio,
+                    "total_event": player.total_event,
+                    "total_match": player.total_match,
+                    "playing_time": player.playing_time,
+                    "created_at": player.created_at,
+                    "updated_at": player.updated_at,
             }
         }
     except Exception as e:
@@ -186,15 +207,22 @@ def get_players_by_team_for_official(
         return {
             "data": [
                 {
-                    "id": player.id,
+                   "id": player.id,
                     "name": player.name,
-                    "position": player.position,
+                    "main_position": player.main_position,
+                    "second_position": player.second_position,
+                    "third_position": player.third_position,
                     "profile_picture": player.profile_picture,
-                    "age": player.age,
+                    "birth_date": player.birth_date,
                     "jersey_number": player.jersey_number,
-                    "height": player.height,
+                    "NISN": player.NISN,
+                    "jersey_number": player.jersey_number,
+                    "dominant_foot": player.dominant_foot,
                     "weight": player.weight,
                     "bio": player.bio,
+                    "total_event": player.total_event,
+                    "total_match": player.total_match,
+                    "playing_time": player.playing_time,
                     "created_at": player.created_at,
                     "updated_at": player.updated_at,
                 }

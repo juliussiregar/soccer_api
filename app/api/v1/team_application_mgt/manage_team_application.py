@@ -122,7 +122,7 @@ def update_application_status(
 
 
 
-@router.get("/team/application/player", description="Get applications by player ID (GUARDIAN)")
+@router.get("/team/application/guardian", description="Get applications by Guardian ID (GUARDIAN)")
 def get_applications_by_player(
     auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
 ):

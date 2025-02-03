@@ -1,13 +1,15 @@
 from typing import List, Optional, Tuple
 from app.core.database import get_session
+from app.models.player import Player
 from app.models.role import Role
 from app.models.user import User
 from app.repositories.role import RoleRepository
 from app.repositories.user import UserRepository
-from app.schemas.user_mgt import RegisterGuardian, UserCreate, UserUpdate, UserFilter, RegisterUpdate, PasswordUpdate, RegisterOfficial
+from app.schemas.user_mgt import AuthUser, RegisterGuardian, UserCreate, UserUpdate, UserFilter, RegisterUpdate, PasswordUpdate, RegisterOfficial, RegisterPlayer
 from sqlalchemy.orm import joinedload
 
 from app.utils.exception import (
+    UnauthorizedException,
     UnprocessableException,
     NotFoundException,
     InternalErrorException,
@@ -210,5 +212,38 @@ class UserService:
         except Exception as err:
             logger.error(str(err))
             raise InternalErrorException("Failed to register official")
+
+        return user
+    
+    def create_player(self, payload: RegisterPlayer, auth_user: AuthUser) -> User:
+        """Buat user sekaligus menjadi Player yang terkait dengan Guardian yang login"""
+
+        # Periksa apakah email sudah digunakan
+        if self.user_repo.is_email_used(payload.email):
+            raise UnprocessableException("Email already used")
+
+        # Validasi apakah user yang login adalah Guardian
+        if "GUARDIAN" not in auth_user.roles or auth_user.guardian_id is None:
+            raise UnauthorizedException("Only Guardians can register a player")
+
+        # Buat user dan player dalam satu transaksi
+        try:
+            user = self.user_repo.insert_player(payload, auth_user)  # Kirim `auth_user`
+
+            # Ambil kembali user dengan relasi lengkap agar tidak terputus dari session
+            with get_session() as db:
+                user = (
+                    db.query(User)
+                    .options(
+                        joinedload(User.player_profile)  # Load Player
+                        .joinedload(Player.guardian_player)  # Load GuardianPlayer juga
+                    )
+                    .filter(User.id == user.id)
+                    .first()
+                )
+
+        except Exception as err:
+            logger.error(str(err))
+            raise InternalErrorException("Failed to register player")
 
         return user

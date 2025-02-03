@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Optional, Annotated
 
-from app.schemas.user_mgt import RegisterGuardian, UserCreate, UserUpdate, RegisterUpdate, UserFilter, RegisterOfficial
+from app.schemas.user_mgt import RegisterGuardian, UserCreate, UserUpdate, RegisterUpdate, UserFilter, RegisterOfficial, RegisterPlayer
 
 from app.middleware.jwt import jwt_middleware, AuthUser
 from app.core.constants.auth import ROLE_ADMIN
@@ -125,6 +125,44 @@ def register_official(
                 "profile_picture": official.profile_picture,
                 "created_at": official.created_at,
                 "updated_at": official.updated_at,
+            }
+        },
+    }
+    
+@router.post("/register/player", description="Register Player")
+def register_player(
+    body: RegisterPlayer,
+    auth_user: AuthUser = Depends(jwt_middleware)  # Ambil Guardian ID dari token
+):
+    user = user_service.create_player(body, auth_user)  # Kirim auth_user ke service
+    player = user.player_profile  # Ambil data player dari relasi user
+
+    return {
+        "data": {
+            "id": user.id,
+            "full_name": user.full_name,
+            "email": user.email,
+            "roles": ["PLAYER"],  # Role otomatis PLAYER
+            "created_at": user.created_at,
+            "player": {
+                "id": player.id,
+                "name": player.name,
+                "birth_date": player.birth_date,
+                "main_position": player.main_position.value,  # Enum harus dikonversi ke string
+                "second_position": player.second_position.value,
+                "third_position": player.third_position.value if player.third_position else None,
+                "jersey_number": player.jersey_number,
+                "NISN": player.NISN,
+                "dominant_foot": player.dominant_foot.value,  # Enum juga
+                "height": player.height,
+                "weight": player.weight,
+                "bio": player.bio,
+                "created_at": player.created_at,
+                "updated_at": player.updated_at,
+            },
+            "guardian": {
+                "guardian_id": auth_user.guardian_id,  # Ambil dari token
+                "relationship": body.relationship_guardian  # Hubungan Guardian-Player
             }
         },
     }

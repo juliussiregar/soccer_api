@@ -1,6 +1,7 @@
 from typing import Optional, List
 from app.core.database import get_session
 from app.models.official import Official
+from app.models.team import Team
 from app.models.team_application import TeamApplication, ApplicationStatus
 from app.models.team_official import TeamOfficial
 from app.models.team_player import TeamPlayer
@@ -37,7 +38,7 @@ class TeamApplicationRepository:
             if application.team_id is None or application.player_id is None:
                 raise Exception("Team ID or Player ID is missing")
 
-            # Pastikan if statement dijalankan
+            # Jika permohonan diterima (ACCEPTED), tambahkan player ke tim
             if str(status) == str(ApplicationStatus.ACCEPTED):
                 existing_team_player = (
                     db.query(TeamPlayer)
@@ -56,6 +57,13 @@ class TeamApplicationRepository:
                         )
                         db.add(new_team_player)
                         db.flush()  # Memastikan perubahan sebelum commit
+
+                        # ✅ Tambahkan +1 ke total_players di tabel Team
+                        team = db.query(Team).filter(Team.id == application.team_id).first()
+                        if team:
+                            team.total_players = (team.total_players or 0) + 1  # Jika None, ubah jadi 0 sebelum tambah
+                            db.flush()
+
                         db.commit()
                         db.refresh(new_team_player)
 
@@ -66,6 +74,7 @@ class TeamApplicationRepository:
             db.commit()
             db.refresh(application)
             return application
+
 
     def delete(self, application_id: int) -> bool:
         with get_session() as db:

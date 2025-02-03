@@ -17,8 +17,15 @@ class TeamService:
             raise Exception("Team not found")
         return team
 
-    def find_by_official_id(self, official_id: int) -> Optional[Team]:
-        return self.team_repo.find_by_official_id(official_id)
+    def get_team_by_user(self, user_id: int, roles: list) -> Optional[Team]:
+        """Mendapatkan tim berdasarkan user_id dan role (Official atau Player)"""
+        if "OFFICIAL" in roles:
+            return self.team_repo.find_team_by_official(user_id)
+
+        if "PLAYER" in roles:
+            return self.team_repo.find_team_by_player(user_id)
+
+        return None
 
     def update(self, team_id: int, payload: dict) -> Team:
         team = self.team_repo.update(team_id, payload)

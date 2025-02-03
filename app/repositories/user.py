@@ -1,18 +1,24 @@
 import logging
 from typing import List, Optional, Tuple
+from app.utils.logger import logger
 from passlib.context import CryptContext
 from sqlalchemy.orm import Query, joinedload
 from sqlalchemy import insert, delete
 
 from app.core.database import get_session
+from app.models.guardian_player import GuardianPlayer
+from app.models.team_official import TeamOfficial
+from app.models.team_player import TeamPlayer
 from app.models.user import User
 from app.models.guardian import Guardian
+from app.models.player import Player
 from app.models.official import Official
 from app.repositories.role import RoleRepository
 from app.utils.date import get_now
 from app.models.role import Role, user_role_association
 
-from app.schemas.user_mgt import RegisterGuardian, UserCreate, UserUpdate, UserFilter, RegisterUpdate,PasswordUpdate, RegisterOfficial
+from app.schemas.user_mgt import AuthUser, RegisterGuardian, UserCreate, UserUpdate, UserFilter, RegisterUpdate,PasswordUpdate, RegisterOfficial, RegisterPlayer
+from app.utils.exception import InternalErrorException
 
 bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -29,6 +35,29 @@ class UserRepository:
                 .filter(User.id == id, User.deleted_at.is_(None))
                 .one_or_none()
             )
+            
+    def find_by_id_with_roles_and_profiles(self, id: int) -> User | None:
+        """
+        Ambil user berdasarkan ID dengan relasi ke Role, Guardian, Official, Player, serta informasi tim mereka.
+        """
+        with get_session() as db:
+            return (
+                db.query(User)
+                .filter(User.id == id, User.deleted_at.is_(None))
+                .options(
+                    joinedload(User.roles),
+                    joinedload(User.guardian_profile),
+                    joinedload(User.official_profile)
+                    .joinedload(Official.team_official)  # Join ke TeamOfficial
+                    .joinedload(TeamOfficial.team),  # Join ke Team
+                    
+                    joinedload(User.player_profile)
+                    .joinedload(Player.team_player)  # Join ke TeamPlayer
+                    .joinedload(TeamPlayer.team)  # Join ke Team
+                )
+                .one_or_none()
+            )
+
 
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         return bcrypt_context.verify(plain_password, hashed_password)
@@ -260,7 +289,7 @@ class UserRepository:
         return user
 
     def insert_guardian(self, payload: RegisterGuardian) -> User:
-        """Membuat user sekaligus menjadi Guardian"""
+        """Membuat user sekaligus menjadi Guardian dengan rollback jika terjadi kesalahan"""
 
         user = User(
             full_name=payload.full_name,
@@ -269,32 +298,38 @@ class UserRepository:
         )
 
         with get_session() as db:
-            db.add(user)
-            db.flush()  # Flush untuk mendapatkan `user.id`
+            try:
+                db.add(user)
+                db.flush()  # Flush untuk mendapatkan `user.id`
 
-            # Tambahkan Guardian
-            guardian = Guardian(
-                user_id=user.id,
-                name=payload.full_name,
-                birth_date=payload.birth_date,
-                kartu_keluarga=payload.kartu_keluarga,
-                ktp=payload.ktp,
-                phone_number=payload.phone_number,
-                address=payload.address,
-            )
-            db.add(guardian)
-
-            # Tambahkan role "GUARDIAN" secara otomatis
-            role = db.query(Role).filter(Role.name == "GUARDIAN").first()
-            if role:
-                db.execute(
-                    user_role_association.insert().values(user_id=user.id, role_id=role.id)
+                # Tambahkan Guardian
+                guardian = Guardian(
+                    user_id=user.id,
+                    name=payload.full_name,
+                    birth_date=payload.birth_date,
+                    kartu_keluarga=payload.kartu_keluarga,
+                    ktp=payload.ktp,
+                    phone_number=payload.phone_number,
+                    address=payload.address,
                 )
+                db.add(guardian)
 
-            db.commit()
-            db.refresh(user)  # Refresh user agar datanya terbaru
+                # Tambahkan role "GUARDIAN" secara otomatis
+                role = db.query(Role).filter(Role.name == "GUARDIAN").first()
+                if role:
+                    db.execute(
+                        user_role_association.insert().values(user_id=user.id, role_id=role.id)
+                    )
 
-        return user
+                db.commit()
+                db.refresh(user)  # Refresh user agar datanya terbaru
+                return user
+
+            except Exception as e:
+                db.rollback()  # Rollback semua perubahan jika ada error
+                logger.error(f"Error inserting guardian: {str(e)}")
+                raise InternalErrorException("Failed to register guardian")
+
     
     def insert_official(self, payload: RegisterOfficial) -> User:
         """Membuat user sekaligus menjadi Official"""
@@ -306,26 +341,88 @@ class UserRepository:
         )
 
         with get_session() as db:
-            db.add(user)
-            db.flush()  # Flush untuk mendapatkan `user.id`
+            try:
+                db.add(user)
+                db.flush()  # Flush untuk mendapatkan `user.id`
 
-            # Tambahkan Offial
-            official = Official(
-                user_id=user.id,
-                name=payload.full_name,
-                position=payload.position,
-                profile_picture=payload.profile_picture,
-            )
-            db.add(official)
-
-            # Tambahkan role "OFFICIAL" secara otomatis
-            role = db.query(Role).filter(Role.name == "OFFICIAL").first()
-            if role:
-                db.execute(
-                    user_role_association.insert().values(user_id=user.id, role_id=role.id)
+                # Tambahkan Offial
+                official = Official(
+                    user_id=user.id,
+                    name=payload.full_name,
+                    position=payload.position,
+                    profile_picture=payload.profile_picture,
                 )
+                db.add(official)
 
-            db.commit()
-            db.refresh(user)  # Refresh user agar datanya terbaru
+                # Tambahkan role "OFFICIAL" secara otomatis
+                role = db.query(Role).filter(Role.name == "OFFICIAL").first()
+                if role:
+                    db.execute(
+                        user_role_association.insert().values(user_id=user.id, role_id=role.id)
+                    )
 
-        return user
+                db.commit()
+                db.refresh(user)  # Refresh user agar datanya terbaru
+
+                return user
+            except Exception as e:
+                db.rollback()  # Rollback semua perubahan jika ada error
+                logger.error(f"Error inserting guardian: {str(e)}")
+                raise InternalErrorException("Failed to register guardian")
+    
+    def insert_player(self, payload: RegisterPlayer, auth_user: AuthUser) -> User:
+        """Membuat user sekaligus menjadi Player yang terhubung ke Guardian (ID dari token)"""
+
+        user = User(
+            full_name=payload.full_name,
+            email=payload.email,
+            password=self.password_hash(payload.password),
+        )
+
+        with get_session() as db:
+            try:
+                db.add(user)
+                db.flush()  # Flush untuk mendapatkan `user.id`
+
+                # Tambahkan Player dengan atribut lengkap
+                player = Player(
+                    user_id=user.id,
+                    name=payload.full_name,
+                    birth_date=payload.birth_date,
+                    main_position=payload.main_position,
+                    second_position=payload.second_position,
+                    third_position=payload.third_position,
+                    jersey_number=payload.jersey_number,
+                    NISN=payload.NISN,
+                    dominant_foot=payload.dominant_foot,
+                    height=payload.height,
+                    weight=payload.weight,
+                    bio=payload.bio,
+                )
+                db.add(player)
+                db.flush()  # Flush agar `player.id` tersedia sebelum digunakan di `GuardianPlayer`
+
+                # Tambahkan GuardianPlayer (hubungan antara Guardian & Player)
+                guardian_player = GuardianPlayer(
+                    guardian_id=auth_user.guardian_id,  # Mengambil Guardian ID dari token
+                    player_id=player.id,
+                    relationship_guardian=payload.relationship_guardian,
+                )
+                db.add(guardian_player)
+
+                # Tambahkan role "PLAYER" secara otomatis
+                role = db.query(Role).filter(Role.name == "PLAYER").first()
+                if role:
+                    db.execute(
+                        user_role_association.insert().values(user_id=user.id, role_id=role.id)
+                    )
+
+                db.commit()
+                db.refresh(user)  # Refresh user agar datanya terbaru
+
+                return user
+
+            except Exception as e:
+                db.rollback()  # Rollback semua perubahan jika ada error
+                logger.error(f"Error inserting guardian: {str(e)}")
+                raise InternalErrorException("Failed to register guardian")

@@ -1,6 +1,7 @@
 from typing import List, Optional
 from app.core.database import get_session
 from app.models.official import Official
+from app.models.player import Player
 from app.models.team import Team
 from app.models.team_player import TeamPlayer
 from app.models.team_official import TeamOfficial
@@ -13,47 +14,62 @@ class TeamRepository:
     def create(self, payload: dict, user_id: int) -> Team:
         with get_session() as db:
             try:
-                # Cari official berdasarkan user_id
+                # ✅ Cari official berdasarkan user_id
                 official = db.query(Official).filter(Official.user_id == user_id).first()
                 if not official:
                     raise Exception(f"No official found for user_id {user_id}")
                 
-                # Cek apakah official sudah memiliki tim
-                existing_team = db.query(Team).join(TeamOfficial).filter(TeamOfficial.official_id == official.id).first()
+                # ✅ Cek apakah official sudah memiliki tim
+                existing_team = (
+                    db.query(Team)
+                    .join(TeamOfficial)
+                    .filter(TeamOfficial.official_id == official.id)
+                    .first()
+                )
                 if existing_team:
                     raise Exception("This official already has a team.")
                 
-                # Buat tim baru
-                team = Team(**payload)
+                # ✅ Buat tim baru
+                team = Team(
+                    team_name=payload["team_name"],
+                    team_logo=payload.get("team_logo"),
+                    founded_at=payload.get("founded_at"),
+                    basecamp=payload.get("basecamp"),
+                    contact=payload.get("contact"),
+                    total_players=0,
+                    description=payload.get("description"),
+                )
                 db.add(team)
-                db.commit()  # Commit untuk mendapatkan ID tim
-
-                # Ambil kembali objek team dari sesi untuk memastikan tetap terikat dengan sesi
-                team = db.query(Team).filter(Team.id == team.id).first()
-
-                # Buat entri di tabel TeamOfficial menggunakan id dari tabel officials
-                team_official = TeamOfficial(team_id=team.id, official_id=official.id)
+                db.flush()  # Pastikan ID tersedia sebelum digunakan
+                
+                # ✅ Tambahkan Official ke dalam tim (TeamOfficial)
+                team_official = TeamOfficial(
+                    team_id=team.id,
+                    official_id=official.id,
+                    position=payload.get("position")  # Pastikan position dikirim dari frontend
+                )
                 db.add(team_official)
-                db.commit()  # Commit untuk menyimpan hubungan di team_officials
 
-                # Ambil kembali objek team_official untuk memastikan tetap terikat dengan sesi
-                team_official = db.query(TeamOfficial).filter(
-                    TeamOfficial.team_id == team.id,
-                    TeamOfficial.official_id == official.id
-                ).first()
+                # ✅ Commit transaksi
+                db.commit()
+
+                # ✅ Refresh objek agar tetap terikat dengan sesi database
+                db.refresh(team)
+                db.refresh(team_official)
 
                 return team
             except Exception as e:
-                db.rollback()  # Rollback transaksi jika terjadi kesalahan
+                db.rollback()  # Rollback jika terjadi kesalahan
                 raise Exception(f"Failed to create team: {str(e)}")
+
 
     def find_by_id(self, team_id: int) -> Optional[Team]:
         with get_session() as db:
             return db.query(Team).filter(Team.id == team_id).one_or_none()
 
-    def find_by_user_id(self, user_id: int) -> Optional[Team]:
+    def find_team_by_official(self, user_id: int) -> Optional[Team]:
+        """Cari tim berdasarkan user_id dari Official"""
         with get_session() as db:
-            # Query untuk mendapatkan tim berdasarkan user_id
             team = (
                 db.query(Team)
                 .join(TeamOfficial, TeamOfficial.team_id == Team.id)
@@ -61,27 +77,20 @@ class TeamRepository:
                 .filter(Official.user_id == user_id)
                 .first()
             )
+        return team
 
-            if team:
-                # Hitung jumlah pemain dalam team_players berdasarkan team_id
-                total_players = (
-                    db.query(func.count(TeamPlayer.id))
-                    .filter(TeamPlayer.team_id == team.id)
-                    .scalar()
-                )
 
-                # Buat objek baru dengan data yang diperbarui untuk menghindari sesi yang tertutup
-                updated_team = Team(
-                    id=team.id,
-                    team_name=team.team_name,
-                    team_logo=team.team_logo,
-                    coach_name=team.coach_name,
-                    total_players=total_players,
-                    created_at=team.created_at,
-                    updated_at=team.updated_at
-                )
-
-                return updated_team  # Mengembalikan objek baru yang tidak terkait dengan sesi
+    def find_team_by_player(self, user_id: int) -> Optional[Team]:
+        """Cari tim berdasarkan user_id dari Player"""
+        with get_session() as db:
+            team = (
+                db.query(Team)
+                .join(TeamPlayer, TeamPlayer.team_id == Team.id)
+                .join(Player, Player.id == TeamPlayer.player_id)
+                .filter(Player.user_id == user_id)
+                .first()
+            )
+        return team
 
     def find_by_official_id(self, official_id: int) -> Optional[Team]:
         with get_session() as db:

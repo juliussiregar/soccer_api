@@ -4,24 +4,26 @@ from sqlalchemy.orm import relationship
 from app.core.constants.app import DEFAULT_TZ
 import enum
 
+import enum
+
 class PositionPlayerEnum(enum.Enum):
-    GOALKEEPER = "GK"  # Kiper
-    CENTER_BACK = "CB"  # Bek Tengah
-    LEFT_BACK = "LB"  # Bek Kiri
-    RIGHT_BACK = "RB"  # Bek Kanan
-    LEFT_WING_BACK = "LWB"  # Bek Sayap Kiri
-    RIGHT_WING_BACK = "RWB"  # Bek Sayap Kanan
-    DEFENSIVE_MIDFIELDER = "DMF"  # Gelandang Bertahan
-    CENTRAL_MIDFIELDER = "CM"  # Gelandang Tengah
-    ATTACKING_MIDFIELDER = "AMF"  # Gelandang Serang
-    LEFT_WINGER = "LW"  # Sayap Kiri
-    RIGHT_WINGER = "RW"  # Sayap Kanan
-    LEFT_WING_FORWARD = "LWF"  # Penyerang Sayap Kiri
-    RIGHT_WING_FORWARD = "RWF"  # Penyerang Sayap Kanan
-    SHADOW_STRIKER = "SS"  # Striker Bayangan
-    STRIKER = "ST"  # Penyerang Tengah
-    SECOND_STRIKER = "SS"  # Penyerang Kedua
-    COMPLETE_FORWARD = "CF"  # Striker Serbaguna
+    GK = "GK"   # Goalkeeper
+    CB = "CB"   # Center Back
+    LB = "LB"   # Left Back
+    RB = "RB"   # Right Back
+    LWB = "LWB" # Left Wing Back
+    RWB = "RWB" # Right Wing Back
+    DMF = "DMF" # Defensive Midfielder
+    CM = "CM"   # Central Midfielder
+    AMF = "AMF" # Attacking Midfielder
+    LW = "LW"   # Left Winger
+    RW = "RW"   # Right Winger
+    LWF = "LWF" # Left Wing Forward
+    RWF = "RWF" # Right Wing Forward
+    SS = "SS"   # Shadow Striker
+    ST = "ST"   # Striker
+    CF = "CF"   # Complete Forward
+
 class DominantFootEnum(enum.Enum):
     LEFT = "Left"
     RIGHT = "Right"

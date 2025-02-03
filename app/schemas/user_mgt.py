@@ -39,6 +39,27 @@ class RegisterOfficial(BaseModel):
 
     class Config:
         orm_mode = True
+        
+class RegisterPlayer(BaseModel):
+    email: str
+    password: str
+    full_name: str
+
+    birth_date: datetime
+    main_position: str
+    second_position: str
+    third_position: Optional[str] = None
+    jersey_number: Optional[int] = None
+    NISN: Optional[int] = None
+    dominant_foot: str
+    height: Optional[int] = None
+    weight: Optional[int] = None
+    bio: Optional[str] = None
+    
+    relationship_guardian: str
+
+    class Config:
+        orm_mode = True
 
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
@@ -69,5 +90,13 @@ class AuthUser(BaseModel):
     created_at: datetime
     updated_at: Optional[datetime] = None
     deleted_at: Optional[datetime] = None
-    roles: Optional[List[str]] = []  # Menambahkan atribut roles yang berisi list role
+    roles: Optional[List[str]] = []
+
+    guardian_id: Optional[int] = None
+    official_id: Optional[int] = None
+    player_id: Optional[int] = None
+
+    team_id: Optional[int] = None  
+    team_name: Optional[str] = None  
+
 
