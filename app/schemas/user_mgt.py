@@ -3,29 +3,45 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 from typing import List, Optional
+
+from app.models.team_official import PositionEnum
 class UserFilter(BaseModel):
     limit: Optional[int] = 20  # Default limit
     page: Optional[int] = 1  # Default page
     search: Optional[str] = None  # Query pencarian full_name
 
 class UserCreate(BaseModel):
-    full_name: str
-    username: str
+    email: str 
     password: str
-    email: Optional[str] = None
+    full_name: str
     role: str
     
     
-class UserRegister(BaseModel):
+class RegisterGuardian(BaseModel):
     full_name: str
-    username: str
     password: str
-    email: Optional[str] = None
-    role: str
+    email: str
+
+    birth_date: datetime
+    kartu_keluarga: str
+    ktp: str
+    phone_number: str
+    address: str
+
+    class Config:
+        orm_mode = True
+class RegisterOfficial(BaseModel):
+    email: str
+    password: str
+    full_name: str
+    position: str  
+    profile_picture: Optional[str] = None
+
+    class Config:
+        orm_mode = True
 
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
-    username: Optional[str] = None
     password: Optional[str] = None
     email: Optional[str] = None
     role: Optional[str] = None
@@ -49,7 +65,6 @@ class PasswordUpdate(BaseModel):
 class AuthUser(BaseModel):
     id: int
     full_name: str
-    username: str
     email: str
     created_at: datetime
     updated_at: Optional[datetime] = None

@@ -17,7 +17,7 @@ auth_service = AuthService()
 
 @router.post("/auth/login")
 def auth_get_access_token(
-    username: str = Form(...),  # Menggunakan 'username' agar sesuai dengan standar OAuth2
+    username: str = Form(...),  
     password: str = Form(...)
 ):
     access_token = auth_service.generate_token(username, password)
@@ -54,7 +54,6 @@ def generate_api_token(auth_user: AuthUser = Depends(jwt_middleware)):
         payload = {
             "id": auth_user.id,
             "full_name": auth_user.full_name,
-            "username": auth_user.username,
             "email": auth_user.email,
             "roles": auth_user.roles,
             "exp": int(expire.timestamp()),  # Expiration as Unix timestamp

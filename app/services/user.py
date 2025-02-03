@@ -1,9 +1,11 @@
 from typing import List, Optional, Tuple
+from app.core.database import get_session
 from app.models.role import Role
 from app.models.user import User
 from app.repositories.role import RoleRepository
 from app.repositories.user import UserRepository
-from app.schemas.user_mgt import UserCreate, UserUpdate, UserFilter, RegisterUpdate, PasswordUpdate
+from app.schemas.user_mgt import RegisterGuardian, UserCreate, UserUpdate, UserFilter, RegisterUpdate, PasswordUpdate, RegisterOfficial
+from sqlalchemy.orm import joinedload
 
 from app.utils.exception import (
     UnprocessableException,
@@ -34,10 +36,6 @@ class UserService:
         return users, total_rows, total_pages
 
     def create(self, payload: UserCreate) -> User:
-        # Periksa apakah username sudah digunakan
-        is_username_exists = self.user_repo.is_username_used(payload.username)
-        if is_username_exists:
-            raise UnprocessableException("Username already used")
 
         # Periksa apakah email sudah digunakan (jika email disediakan)
         if payload.email is not None:
@@ -66,11 +64,6 @@ class UserService:
         user = self.user_repo.find_by_id(user_id)
         if not user:
             raise NotFoundException("User not found")
-
-        # Check username uniqueness if being updated
-        if payload.username and payload.username != user.username:
-            if self.user_repo.is_username_used(payload.username, except_id=user_id):
-                raise UnprocessableException("Username already used")
 
         # Check email uniqueness if being updated
         if payload.email and payload.email != user.email:
@@ -128,7 +121,7 @@ class UserService:
     def update_password(self, id: int, payload: RegisterUpdate) -> User:
         userdetil = self.user_repo.find_by_id(id)
         if not userdetil:
-            raise UnprocessableException("username not found")
+            raise UnprocessableException("user not found")
 
         pass_is_same = self.user_repo.verify_password(payload.password, userdetil.password)
         if pass_is_same:
@@ -148,8 +141,6 @@ class UserService:
     
     def update_user_password(self, id: int, payload: PasswordUpdate) -> User:
         userdetil = self.user_repo.find_by_id(id)
-        if not userdetil:
-            raise UnprocessableException("username not found")
 
         pass_is_same = self.user_repo.verify_password(payload.new_password, userdetil.password)
         if pass_is_same:
@@ -167,5 +158,57 @@ class UserService:
 
         if user is None:
             raise NotFoundException("user does not exists")
+
+        return user
+    
+    def create_guardian(self, payload: RegisterGuardian) -> User:
+        """Buat user sekaligus menjadi Guardian"""
+
+        # Periksa apakah email sudah digunakan
+        if self.user_repo.is_email_used(payload.email):
+            raise UnprocessableException("Email already used")
+
+        # Buat user dan guardian dalam satu transaksi
+        try:
+            user = self.user_repo.insert_guardian(payload)
+
+            # Ambil kembali user dengan relasi guardian_profile agar tidak terputus dari session
+            with get_session() as db:
+                user = (
+                    db.query(User)
+                    .options(joinedload(User.guardian_profile))  # Load relasi langsung
+                    .filter(User.id == user.id)
+                    .first()
+                )
+
+        except Exception as err:
+            logger.error(str(err))
+            raise InternalErrorException("Failed to register guardian")
+
+        return user
+    
+    def create_official(self, payload: RegisterOfficial) -> User:
+        """Buat user sekaligus menjadi Official"""
+
+        # Periksa apakah email sudah digunakan
+        if self.user_repo.is_email_used(payload.email):
+            raise UnprocessableException("Email already used")
+
+        # Buat user dan guardian dalam satu transaksi
+        try:
+            user = self.user_repo.insert_official(payload)
+
+            # Ambil kembali user dengan relasi official_profile agar tidak terputus dari session
+            with get_session() as db:
+                user = (
+                    db.query(User)
+                    .options(joinedload(User.official_profile))  # Load relasi langsung
+                    .filter(User.id == user.id)
+                    .first()
+                )
+
+        except Exception as err:
+            logger.error(str(err))
+            raise InternalErrorException("Failed to register official")
 
         return user

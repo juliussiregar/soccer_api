@@ -14,7 +14,7 @@ class AuthService:
         self.auth_repo = AuthRepository()
 
     def generate_token(self, identifier: str, password: str) -> str:
-        user = self.auth_repo.find_by_username_or_email(identifier)
+        user = self.auth_repo.find_by_email(identifier)
         if user is None or not self.auth_repo.verify_password(password, user.password):
             raise UnauthorizedException("Invalid credentials")
 
@@ -38,7 +38,6 @@ class AuthService:
             user_data = AuthUser(
                 id=user.id,
                 full_name=user.full_name,
-                username=user.username,
                 email=user.email,
                 created_at=user.created_at,
                 updated_at=user.updated_at,

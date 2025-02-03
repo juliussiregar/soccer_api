@@ -3,7 +3,6 @@ from typing import Annotated, Optional
 from typing import List
 from app.schemas.player import PlayerCreate, PlayerUpdate, PlayerResponse
 from app.middleware.jwt import jwt_middleware, AuthUser
-from app.schemas.user_mgt import UserRegister
 from app.services.official import OfficialService
 from app.services.player import PlayerService
 from app.core.constants.auth import ROLE_ADMIN, ROLE_GUARDIAN, ROLE_OFFICIAL, ROLE_PLAYER
@@ -13,57 +12,6 @@ router = APIRouter()
 player_service = PlayerService()
 official_service = OfficialService()
 user_service = UserService()
-
-@router.post("/player", description="Create a player profile (GUARDIAN only)")
-def create_user_and_player(
-    auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
-    user_body: UserRegister,
-    player_body: PlayerCreate,
-):
-    # Hanya GUARDIAN yang dapat membuat user dan player profile
-    if not auth_user.roles or ROLE_GUARDIAN not in auth_user.roles:
-        raise HTTPException(
-            status_code=403,
-            detail="Access denied: Only GUARDIAN role can create a user and player profile."
-        )
-
-    try:
-        # Step 1: Create a new user
-        user = user_service.create(user_body)
-
-        # Step 2: Create a new player associated with the user
-        player_payload = player_body.dict()
-        player_payload["user_id"] = user.id  # Associate player with the created user's ID
-        player = player_service.create(player_payload, user_id=auth_user.id)
-
-        return {
-            "data": {
-                "user": {
-                    "id": user.id,
-                    "full_name": user.full_name,
-                    "username": user.username,
-                    "roles": [user_body.role],
-                    "created_at": user.created_at,
-                    "updated_at": user.updated_at,
-                },
-                "player": {
-                    "id": player.id,
-                    "name": player.name,
-                    "position": player.position,
-                    "profile_picture": player.profile_picture,
-                    "age": player.age,
-                    "jersey_number": player.jersey_number,
-                    "height": player.height,
-                    "weight": player.weight,
-                    "bio": player.bio,
-                    "created_at": player.created_at,
-                    "updated_at": player.updated_at,
-                },
-            }
-        }
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
 
 @router.get("/player/guardian", description="Get players by guardian ID (GUARDIAN only)")
 def get_players_by_guardian(

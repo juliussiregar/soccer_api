@@ -10,8 +10,11 @@ class Guardian(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"),unique=True, nullable=False)  # Referensi ke tabel User
     name = Column(String, nullable=False)
+    birth_date = Column(DateTime, nullable=False)
     kartu_keluarga = Column(String, nullable=False)
     ktp = Column(String, nullable=False)
+    phone_number = Column(String, nullable=False)
+    address = Column(String, nullable=False)
     created_at = Column(DateTime, server_default=func.timezone(DEFAULT_TZ, func.now()))
     updated_at = Column(DateTime, nullable=True)
 

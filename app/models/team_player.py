@@ -1,8 +1,14 @@
 # team_player.py
 from .base import Base
-from sqlalchemy import UUID, ForeignKey, Column, Integer, String, DateTime, func, UniqueConstraint
+from sqlalchemy import UUID, ForeignKey, Column, Integer, String, DateTime, func, UniqueConstraint, Enum as SQLAlchemyEnum
 from sqlalchemy.orm import relationship
 from app.core.constants.app import DEFAULT_TZ
+import enum
+
+class PlayerStatusEnum(enum.Enum):
+    STARTER = "Starter"
+    SUBSTITUTE = "Substitute"
+
 
 class TeamPlayer(Base):
     __tablename__ = "team_players"
@@ -10,6 +16,7 @@ class TeamPlayer(Base):
     id = Column(Integer, primary_key=True, index=True)
     team_id = Column(Integer, ForeignKey("teams.id"), nullable=False)  # Referensi ke tabel teams
     player_id = Column(Integer, ForeignKey("players.id"), nullable=False)  # Referensi ke tabel users sebagai player
+    status = Column(SQLAlchemyEnum(PlayerStatusEnum), nullable=False, default=PlayerStatusEnum.SUBSTITUTE)  # Starter atau Cadangan
     created_at = Column(DateTime, server_default=func.timezone(DEFAULT_TZ, func.now()))
 
    # Relasi ke Player

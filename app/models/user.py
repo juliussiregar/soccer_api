@@ -8,10 +8,9 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, nullable=False)
     full_name = Column(String, nullable=False)
-    username = Column(String, unique=True, index=True, nullable=False)
     password = Column(String, nullable=False)
-    email = Column(String, unique=True, nullable=True)
     created_at = Column(DateTime, server_default=func.timezone(DEFAULT_TZ, func.now()))
     updated_at = Column(DateTime, nullable=True)
     deleted_at = Column(DateTime, nullable=True)

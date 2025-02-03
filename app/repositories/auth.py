@@ -21,12 +21,12 @@ class AuthRepository:
                 .one_or_none()
             )
 
-    def find_by_username_or_email(self, identifier: str) -> User | None:
+    def find_by_email(self, identifier: str) -> User | None:
         with get_session() as db:
             return (
                 db.query(User)
                 .filter(
-                    or_(User.username == identifier, User.email == identifier),
+                    or_(User.email == identifier),
                     User.deleted_at.is_(None)
                 )
                 .options(joinedload(User.roles))  
@@ -51,14 +51,14 @@ class AuthRepository:
             return False
         return any(role.name == role_name for role in user.roles)
 
-    def is_username_or_email_used(self, username: str, email: str, except_id: int = 0) -> bool:
+    def is_email_used(self, email: str, except_id: int = 0) -> bool:
         with get_session() as db:
-            username_or_email_count = (
+            email_count = (
                 db.query(User)
                 .filter(
-                    or_(User.username == username, User.email == email),
+                    or_(User.email == email),
                     User.id != except_id
                 )
                 .count()
             )
-        return username_or_email_count > 0
+        return email_count > 0

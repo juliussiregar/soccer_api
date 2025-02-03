@@ -6,11 +6,13 @@ from sqlalchemy import insert, delete
 
 from app.core.database import get_session
 from app.models.user import User
+from app.models.guardian import Guardian
+from app.models.official import Official
 from app.repositories.role import RoleRepository
 from app.utils.date import get_now
 from app.models.role import Role, user_role_association
 
-from app.schemas.user_mgt import UserCreate, UserUpdate, UserFilter, RegisterUpdate,PasswordUpdate
+from app.schemas.user_mgt import RegisterGuardian, UserCreate, UserUpdate, UserFilter, RegisterUpdate,PasswordUpdate, RegisterOfficial
 
 bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -25,14 +27,6 @@ class UserRepository:
             return (
                 db.query(User)
                 .filter(User.id == id, User.deleted_at.is_(None))
-                .one_or_none()
-            )
-
-    def find_by_username(self, username: str) -> User | None:
-        with get_session() as db:
-            return (
-                db.query(User)
-                .filter(User.username == username, User.deleted_at.is_(None))
                 .one_or_none()
             )
 
@@ -119,8 +113,6 @@ class UserRepository:
 
     def insert(self, payload: UserCreate) -> User:
         user = User()
-        user.username = payload.username
-
         user.full_name = payload.full_name
         user.email = payload.email
 
@@ -158,8 +150,6 @@ class UserRepository:
                 return None
 
             # Update basic user information
-            if payload.username:
-                user.username = payload.username
             if payload.full_name:
                 user.full_name = payload.full_name
             if payload.email:
@@ -200,15 +190,6 @@ class UserRepository:
             db.refresh(user)
             return user
         
-    def is_username_used(self, username: str, except_id: int = 0) -> bool:
-        with get_session() as db:
-            username_count = (
-                db.query(User)
-                .filter(User.username == username, User.id != except_id)
-                .count()
-            )
-
-        return username_count > 0
 
     def delete(self, user_id: int) -> bool:
         with get_session() as db:
@@ -278,3 +259,73 @@ class UserRepository:
 
         return user
 
+    def insert_guardian(self, payload: RegisterGuardian) -> User:
+        """Membuat user sekaligus menjadi Guardian"""
+
+        user = User(
+            full_name=payload.full_name,
+            email=payload.email,
+            password=self.password_hash(payload.password),
+        )
+
+        with get_session() as db:
+            db.add(user)
+            db.flush()  # Flush untuk mendapatkan `user.id`
+
+            # Tambahkan Guardian
+            guardian = Guardian(
+                user_id=user.id,
+                name=payload.full_name,
+                birth_date=payload.birth_date,
+                kartu_keluarga=payload.kartu_keluarga,
+                ktp=payload.ktp,
+                phone_number=payload.phone_number,
+                address=payload.address,
+            )
+            db.add(guardian)
+
+            # Tambahkan role "GUARDIAN" secara otomatis
+            role = db.query(Role).filter(Role.name == "GUARDIAN").first()
+            if role:
+                db.execute(
+                    user_role_association.insert().values(user_id=user.id, role_id=role.id)
+                )
+
+            db.commit()
+            db.refresh(user)  # Refresh user agar datanya terbaru
+
+        return user
+    
+    def insert_official(self, payload: RegisterOfficial) -> User:
+        """Membuat user sekaligus menjadi Official"""
+
+        user = User(
+            full_name=payload.full_name,
+            email=payload.email,
+            password=self.password_hash(payload.password),
+        )
+
+        with get_session() as db:
+            db.add(user)
+            db.flush()  # Flush untuk mendapatkan `user.id`
+
+            # Tambahkan Offial
+            official = Official(
+                user_id=user.id,
+                name=payload.full_name,
+                position=payload.position,
+                profile_picture=payload.profile_picture,
+            )
+            db.add(official)
+
+            # Tambahkan role "OFFICIAL" secara otomatis
+            role = db.query(Role).filter(Role.name == "OFFICIAL").first()
+            if role:
+                db.execute(
+                    user_role_association.insert().values(user_id=user.id, role_id=role.id)
+                )
+
+            db.commit()
+            db.refresh(user)  # Refresh user agar datanya terbaru
+
+        return user

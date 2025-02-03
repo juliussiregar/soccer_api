@@ -31,7 +31,6 @@ class JwtMiddleware:
             auth_user = AuthUser(
                 id=payload.get("id"),
                 full_name=payload.get("full_name"),
-                username=payload.get("username", ""),
                 email=payload.get("email", ""),
                 created_at=payload.get("created_at", datetime.now(timezone.utc)),
                 updated_at=payload.get("updated_at"),

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Optional, Annotated
 
-from app.schemas.user_mgt import UserCreate, UserUpdate, RegisterUpdate, UserFilter, UserRegister
+from app.schemas.user_mgt import RegisterGuardian, UserCreate, UserUpdate, RegisterUpdate, UserFilter, RegisterOfficial
 
 from app.middleware.jwt import jwt_middleware, AuthUser
 from app.core.constants.auth import ROLE_ADMIN
@@ -39,7 +39,6 @@ def user_list(
             {
                 "id": user.id,
                 "full_name": user.full_name,
-                "username": user.username,
                 "roles": [role.name for role in user.roles],
                 "created_at": user.created_at,
                 "updated_at": user.updated_at,
@@ -57,15 +56,15 @@ def user_list(
 
 @router.post("/user")
 def user_create(
-    auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
+    # auth_user: Annotated[AuthUser, Depends(jwt_middleware)],
         body: UserCreate
 ):
-    # Check if the user has the 'ADMIN' role
-    if not auth_user.roles or ROLE_ADMIN not in auth_user.roles:
-        raise HTTPException(
-            status_code=403,
-            detail="Access denied: Only ADMIN role can create a new user."
-        )
+    # # Check if the user has the 'ADMIN' role
+    # if not auth_user.roles or ROLE_ADMIN not in auth_user.roles:
+    #     raise HTTPException(
+    #         status_code=403,
+    #         detail="Access denied: Only ADMIN role can create a new user."
+    #     )
 
     user = user_service.create(body)
 
@@ -73,29 +72,64 @@ def user_create(
         "data": {
             "id": user.id,
             "full_name": user.full_name,
-            "username": user.username,
+            "email": user.email,
             "roles": [body.role],
             "created_at": user.created_at,
             "updated_at": user.updated_at,
         },
     }
     
-@router.post("/register")
-def user_create(
-        body: UserRegister
+@router.post("/register/guardian", description="Register Guardian")
+def register_guardian(
+    body: RegisterGuardian
 ):
-    user = user_service.create(body)
+    user = user_service.create_guardian(body)
+    guardian = user.guardian_profile  # Ambil data guardian dari relasi user
 
     return {
         "data": {
             "id": user.id,
             "full_name": user.full_name,
-            "username": user.username,
-            "roles": [body.role],
+            "email": user.email,
+            "roles": ["GUARDIAN"],  # Role otomatis GUARDIAN
             "created_at": user.created_at,
-            "updated_at": user.updated_at,
+            "guardian": {
+                "id": guardian.id,
+                "birth_date": guardian.birth_date,
+                "kartu_keluarga": guardian.kartu_keluarga,
+                "ktp": guardian.ktp,
+                "phone_number": guardian.phone_number,
+                "address": guardian.address
+            }
         },
     }
+    
+@router.post("/register/official", description="Register Official")
+def register_official(
+    body: RegisterOfficial
+):
+    user = user_service.create_official(body)
+    official = user.official_profile  # Ambil data official dari relasi user
+
+    return {
+        "data": {
+            "id": user.id,
+            "full_name": user.full_name,
+            "email": user.email,
+            "roles": ["OFFICIAL"],  # Role otomatis OFFICIAL
+            "created_at": user.created_at,
+            "official": {
+                "id": official.id,
+                "name": official.name,
+                "position": official.position.value,
+                "profile_picture": official.profile_picture,
+                "created_at": official.created_at,
+                "updated_at": official.updated_at,
+            }
+        },
+    }
+
+
 
 @router.put("/user/{id}")
 def user_update(
@@ -116,7 +150,7 @@ def user_update(
         "data": {
             "id": user.id,
             "full_name": user.full_name,
-            "username": user.username,
+            "email": user.email,
             "created_at": user.created_at,
             "updated_at": user.updated_at,
         },
@@ -155,7 +189,7 @@ def user_update(
         "data": {
             "id": user.id,
             "full_name": user.full_name,
-            "username": user.username,
+            "email": user.email,
             "created_at": user.created_at,
             "updated_at": user.updated_at,
         },
