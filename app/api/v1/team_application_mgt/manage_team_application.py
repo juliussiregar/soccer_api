@@ -11,6 +11,7 @@ from app.core.constants.auth import ROLE_GUARDIAN, ROLE_OFFICIAL, ROLE_PLAYER
 from app.models.guardian_player import GuardianPlayer
 from app.models.team_application import TeamApplication
 from app.models.team import Team
+from app.models.player import Player
 from app.core.database import get_session
 
 router = APIRouter()
@@ -134,15 +135,14 @@ def get_applications_by_player(
         )
 
     try:
-        # Cari guardian_id berdasarkan user_id
         with get_session() as db:
+            # Cari guardian berdasarkan user_id
             guardian = db.query(Guardian).filter(Guardian.user_id == auth_user.id).first()
             if not guardian:
                 logger.warning(f"No guardian found for user_id {auth_user.id}")
                 raise HTTPException(status_code=404, detail="Guardian profile not found.")
 
             guardian_id = guardian.id
-            logger.info(f"Authenticated guardian_id: {guardian_id}")
 
             # Ambil semua player_id yang terkait dengan guardian_id
             guardian_players = (
@@ -152,18 +152,37 @@ def get_applications_by_player(
             )
             player_ids = [gp.player_id for gp in guardian_players]
 
-        logger.info(f"Player IDs linked to guardian_id {guardian_id}: {player_ids}")
+        if not player_ids:
+            return {"data": []}
 
-        # Cari aplikasi berdasarkan player_ids
-        applications = team_application_service.find_by_player_ids(player_ids)
-        logger.info(f"Applications found for player_ids {player_ids}: {applications}")
+        # Cari aplikasi berdasarkan player_ids dengan JOIN ke tabel Player dan Team
+        applications = (
+            db.query(
+                TeamApplication.id,
+                TeamApplication.player_id,
+                Player.name.label("player_name"),  # Ambil nama pemain
+                TeamApplication.team_id,
+                Team.team_name.label("team_name"),  # Ambil nama tim
+                TeamApplication.status,
+                TeamApplication.message,
+                TeamApplication.created_at,
+                TeamApplication.updated_at,
+            )
+            .join(Player, Player.id == TeamApplication.player_id)  # Join ke tabel Player
+            .join(Team, Team.id == TeamApplication.team_id)  # Join ke tabel Team
+            .filter(TeamApplication.player_id.in_(player_ids))
+            .all()
+        )
 
+        # Return data dengan nama tim dan nama pemain
         return {
             "data": [
                 {
                     "id": app.id,
                     "player_id": app.player_id,
+                    "player_name": app.player_name,
                     "team_id": app.team_id,
+                    "team_name": app.team_name,
                     "status": app.status,
                     "message": app.message,
                     "created_at": app.created_at,
@@ -172,9 +191,11 @@ def get_applications_by_player(
                 for app in applications
             ]
         }
+
     except Exception as e:
         logger.error(f"Error fetching applications: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch applications.")
+
 
 
 @router.delete("/team/application/{application_id}", description="Delete a team application (GUARDIAN only)")
