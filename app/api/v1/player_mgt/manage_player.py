@@ -218,6 +218,7 @@ def get_players_by_team_for_official(
                     "NISN": player.NISN,
                     "jersey_number": player.jersey_number,
                     "dominant_foot": player.dominant_foot,
+                    "height": player.height,
                     "weight": player.weight,
                     "bio": player.bio,
                     "total_event": player.total_event,
