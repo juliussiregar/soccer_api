@@ -151,6 +151,7 @@ def register_player(
                 "main_position": player.main_position.value,  # Enum harus dikonversi ke string
                 "second_position": player.second_position.value,
                 "third_position": player.third_position.value if player.third_position else None,
+                "profile_picture": player.profile_picture,
                 "jersey_number": player.jersey_number,
                 "NISN": player.NISN,
                 "dominant_foot": player.dominant_foot.value,  # Enum juga

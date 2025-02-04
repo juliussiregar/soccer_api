@@ -392,6 +392,7 @@ class UserRepository:
                     main_position=payload.main_position,
                     second_position=payload.second_position,
                     third_position=payload.third_position,
+                    profile_picture=payload.profile_picture,
                     jersey_number=payload.jersey_number,
                     NISN=payload.NISN,
                     dominant_foot=payload.dominant_foot,

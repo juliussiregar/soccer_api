@@ -49,6 +49,7 @@ class RegisterPlayer(BaseModel):
     main_position: str
     second_position: str
     third_position: Optional[str] = None
+    profile_picture: Optional[str] = None
     jersey_number: Optional[int] = None
     NISN: Optional[int] = None
     dominant_foot: str
