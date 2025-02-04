@@ -55,3 +55,12 @@ class OfficialRepository:
     def count(self) -> int:
         with get_session() as db:
             return db.query(Official).count()
+
+    def find_by_team_id(self, team_id: int) -> List[Official]:
+        with get_session() as db:
+            return (
+                db.query(Official)
+                .join(TeamOfficial, Official.id == TeamOfficial.official_id)
+                .filter(TeamOfficial.team_id == team_id)
+                .all()
+            )

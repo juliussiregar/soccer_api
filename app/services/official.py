@@ -36,3 +36,10 @@ class OfficialService:
         officials = self.official_repo.list(limit, offset)
         total = self.official_repo.count()
         return officials, total
+    
+    # Metode untuk mendapatkan semua official dalam tim yang sama berdasarkan team_id
+    def get_officials_in_same_team(self, team_id: int) -> List[Official]:
+        if not team_id:
+            raise Exception("User is not associated with any team")
+        
+        return self.official_repo.find_by_team_id(team_id)

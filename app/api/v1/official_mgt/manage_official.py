@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
-from typing import Annotated
-from app.schemas.official import OfficialCreate, OfficialUpdate
+from typing import Annotated, List
+from app.schemas.official import OfficialCreate, OfficialUpdate, OfficialResponse
 from app.middleware.jwt import jwt_middleware, AuthUser
 from app.services.official import OfficialService
 from app.core.constants.auth import ROLE_ADMIN, ROLE_OFFICIAL
@@ -100,6 +100,26 @@ def list_all_officials(
                 "total_rows": total,
                 "total_pages": total_pages,
             },
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+    
+@router.get("/officials/my-team", response_model=dict, description="Get all officials in the same team as the logged-in official")
+def get_officials_in_same_team(auth_user: Annotated[AuthUser, Depends(jwt_middleware)]):
+    # Cek apakah user memiliki role OFFICIAL
+    if not auth_user.roles or ROLE_OFFICIAL not in auth_user.roles:
+        raise HTTPException(status_code=403, detail="Access denied: Only OFFICIAL role can access this resource.")
+
+    # Ambil team_id dari token login
+    team_id = auth_user.team_id
+    if not team_id:
+        raise HTTPException(status_code=400, detail="User is not associated with any team.")
+
+    try:
+        officials = official_service.get_officials_in_same_team(team_id)
+        return {
+            "data": [OfficialResponse(id=official.id, name=official.name, position=official.position, profile_picture=official.profile_picture) for official in officials]
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
